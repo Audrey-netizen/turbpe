@@ -1,4 +1,9 @@
-# Go wild here and use it as a group playground file. 
-# Aka just a bunch of stuff in one Rmarkdown file for now,
-# once we get more detail we can start adding more files,
-# folders even, but for now just this. Have fun!
+# Go wild here and use it as a group playground file. Aka just a bunch of stuff 
+# in one Rmarkdown file for now, once we get more detail we can start adding 
+# more files, folders even, but for now just this. Have fun!
+
+```{r}
+
+# :)))
+
+```
