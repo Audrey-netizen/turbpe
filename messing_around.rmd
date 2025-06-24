@@ -3,8 +3,29 @@
 # more files, folders even, but for now just this. Have fun!
 
 ```{r}
+library("ggplot2")
+```
 
-# :)))
-#hii
+```{r}
+
+
+
 
 ```
+
+
+```{r}
+
+read.csv("data_abiotic.csv")
+
+abiotics <- read.csv("data_abiotic.csv")
+
+
+plot(abiotics$"Traffic.passenger", abiotics$"Temp", 
+     main="Scatterplot of Traffic (Passenger Vehicles) vs Temperature", 
+     xlab="Traffic (Passenger Vehicles)", 
+     ylab="Temperature"
+     )
+
+```
+
