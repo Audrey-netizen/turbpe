@@ -24,8 +24,29 @@ abiotics <- read.csv("data_abiotic.csv")
 plot(abiotics$"Traffic.passenger", abiotics$"Temp", 
      main="Scatterplot of Traffic (Passenger Vehicles) vs Temperature", 
      xlab="Traffic (Passenger Vehicles)", 
-     ylab="Temperature"
+     ylab="Temperature",
+     col="purple",
+     pch=18
      )
 
+abiotics$Traffic.passenger <- as.numeric(abiotics$Traffic.passenger)
+abiotics$Temp <- as.numeric(abiotics$Temp)
+
+# Calculate correlation coefficient
+corr_coef <- cor(abiotics$"Traffic.passenger", abiotics$"Temp", use="complete.obs")
+
+# Print correlation coefficient to console
+print(corr_coef)
+
+text(
+  x = min(abiotics$"Traffic.passenger", na.rm=TRUE), 
+  #mean(range()) centers the text, min() puts it at min val near axis, and max() puts it at max val
+  #na.rm tells R to ignore NAs in data
+  y = max(abiotics$"Temp", na.rm=TRUE), 
+  labels = paste("r =", round(corr_coef, 2)), #creates a string to display result 
+  pos = 4, #This sets the position of the text relative to the (x, y) point - this is 4 to the right of relative (x,y) origin
+  #valid pos values: 1 — Below the specified (x, y) point, 2 — To the left of the specified (x, y) point, 3 — Above the specified (x, y) point, 4 — To the right of the specified (x, y) point
+  col = "blue" 
+)
 ```
 
