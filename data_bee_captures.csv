@@ -1,4 +1,4 @@
-Plant ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique ID,drying,etc
+kPlant ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique ID,drying,etc
 30,DP1,13:46,15/5/25,,,,,,,
 22,DP1,13:50,15/5/25,,,,,,,
 30,DP1,14:04,15/5/25,,,,,,,
@@ -168,3 +168,9 @@ Plant ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique ID,drying,etc
 5,DP2,11:44,4/7/25,,,,,,,
 42,DP2,11:44,4/7/25,,,,,,,
 122,DP2,11:55,4/7/25,,,,,,,
+5,DP2,11:59,4/7/25,4
+42,DP2,12:22,4/7/25,4
+42,DP2,12:25,4/7/25,4
+
+
+
