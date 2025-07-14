@@ -1,7 +1,7 @@
-kSite,Time,Date,Replicate,Species ID,# of Flowering Units, Extra Notes
-DP1,13:40-14:10,15/5/25,1,21,7,
-DP1,13:40-14:10,15/5/25,1,29,438,
-DP1,13:40-14:10,15/5/25,1,30,303,
+Site,Time,Date,Replicate,Species ID,# of Flowering Units, Extra Notes
+DP1,13:40-14:10,15/5/25,1,21,7,,
+DP1,13:40-14:10,15/5/25,1,29,438,,
+DP1,13:40-14:10,15/5/25,1,30,303,,
 
 
 
