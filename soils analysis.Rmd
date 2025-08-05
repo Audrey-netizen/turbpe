@@ -1,0 +1,128 @@
+---
+title: "Urban soils analysis"
+author: "Gordon Fitch"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+### Read in data
+```{r}
+soils <- read.csv("~/Downloads/soil composition.csv")
+```
+
+### Run PCA and basic plot
+```{r}
+pca.soil <- prcomp(soils[,c(5:38)], center = T, scale = T)
+biplot(pca.soil)
+```
+
+### Plot with site type, area, and roadside ellipses
+```{r}
+fviz_ellipses(pca.soil, 
+              as.factor(soils$Type),
+              graph.type = "ggplot", 
+              ggtheme = theme_minimal(),
+              pointsize=2, 
+              geom="point", 
+              ellipse.level = 0.95, ellipse.type = c("confidence"))
+
+fviz_ellipses(pca.soil, 
+              as.factor(soils$Area),
+              graph.type = "ggplot", 
+              ggtheme = theme_minimal(),
+              pointsize=2, 
+              geom="point", 
+              ellipse.level = 0.95, ellipse.type = c("confidence"))
+
+fviz_ellipses(pca.soil, 
+              as.factor(soils$Roadside),
+              graph.type = "ggplot", 
+              ggtheme = theme_minimal(),
+              pointsize=2, 
+              geom="point", 
+              ellipse.level = 0.95, ellipse.type = c("confidence"))
+```
+
+### Plots showing contribution of elements to PC1 & PC2
+```{r}
+fviz_contrib(pca.soil, choice="var", axes = 1,
+              fill = "lightgray", color = "black") +
+     theme_minimal() +
+     theme(axis.text.x = element_text(angle=45))
+
+fviz_contrib(pca.soil, choice="var", axes = 2,
+              fill = "lightgray", color = "black") +
+     theme_minimal() +
+     theme(axis.text.x = element_text(angle=45))
+```
+
+### Extract PC1 from plot for use as predictor in models
+```{r}
+pca.results <- as.data.frame(pca.soil$x)
+pca.site <- cbind(soils[,c(1:4)], pca.results)
+```
+
+### NMDS (another kind of ordination)
+```{r}
+soils.matrix <- soils[,c(5:38)]
+NMDS <- metaMDS(soils.matrix,k=2)
+NMDS #stress = 0.18
+
+data.scores <- as.data.frame(scores(NMDS)$sites)  #Using the scores function from vegan to extract the site scores and convert to a data.frame
+data.scores$sample <- soils$Client.Sample.ID  # create a column of site names, from the rownames of data.scores
+data.scores$area <- soils$Area
+data.scores$type <- soils$Type
+data.scores$road <- soils$Roadside
+element.scores <- as.data.frame(scores(NMDS, "species"))  #Using the scores function from vegan to extract the species scores and convert to a data.frame
+element.scores$elements <- rownames(element.scores)
+
+#create hulls for type
+type.N <- data.scores[data.scores$type == "Negative control", ][chull(data.scores[data.scores$type == 
+    "Negative control", c("NMDS1", "NMDS2")]), ]  # hull values for negative controls
+type.P <- data.scores[data.scores$type == "Positive control", ][chull(data.scores[data.scores$type == 
+    "Positive control", c("NMDS1", "NMDS2")]), ]  # hull values for positive controls
+type.T <- data.scores[data.scores$type == "Treatment", ][chull(data.scores[data.scores$type == 
+    "Treatment", c("NMDS1", "NMDS2")]), ]  # hull values for treatments
+hull.data <- rbind(type.N, type.P, type.T)
+
+#plot NMDS with location hulls
+ggplot() + 
+  geom_polygon(data=hull.data,aes(x=NMDS1,y=NMDS2,fill=type, group=type),alpha=0.30) + # add the convex hulls
+  geom_text(data=element.scores,aes(x=NMDS1,y=NMDS2,label=elements),alpha=0.5) +  # add the element labels
+  geom_point(data=data.scores,aes(x=NMDS1,y=NMDS2,shape=type,colour=type),size=4) + # add the point markers
+  coord_equal() +
+  theme_bw() + 
+  theme(axis.text.x = element_blank(),  # remove x-axis text
+        axis.text.y = element_blank(), # remove y-axis text
+        axis.ticks = element_blank(),  # remove axis ticks
+        axis.title.x = element_text(size=18), # remove x-axis labels
+        axis.title.y = element_text(size=18), # remove y-axis labels
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),  #remove major-grid labels
+        panel.grid.minor = element_blank(),  #remove minor-grid labels
+        plot.background = element_blank())
+
+#create hulls for roadside or not
+road.Y <- data.scores[data.scores$road == "Y", ][chull(data.scores[data.scores$road == 
+    "Y", c("NMDS1", "NMDS2")]), ]  # hull values for roadside sites
+road.N <- data.scores[data.scores$road == "N", ][chull(data.scores[data.scores$road == 
+    "N", c("NMDS1", "NMDS2")]), ]  # hull values for positive controls
+hull.data.road <- rbind(road.Y, road.N)
+
+#plot NMDS with location hulls
+ggplot() + 
+  geom_polygon(data=hull.data.road, aes(x=NMDS1,y=NMDS2,fill=road, group=road),alpha=0.30) + # add the convex hulls
+  geom_text(data=element.scores,aes(x=NMDS1,y=NMDS2,label=elements),alpha=0.5) +  # add the element labels
+  geom_point(data=data.scores,aes(x=NMDS1,y=NMDS2,shape=road,colour=road),size=4) + # add the point markers
+  coord_equal() +
+  theme_bw() + 
+  theme(axis.text.x = element_blank(),  # remove x-axis text
+        axis.text.y = element_blank(), # remove y-axis text
+        axis.ticks = element_blank(),  # remove axis ticks
+        axis.title.x = element_text(size=18), # remove x-axis labels
+        axis.title.y = element_text(size=18), # remove y-axis labels
+        panel.background = element_blank(), 
+        panel.grid.major = element_blank(),  #remove major-grid labels
+        panel.grid.minor = element_blank(),  #remove minor-grid labels
+        plot.background = element_blank())
+```
