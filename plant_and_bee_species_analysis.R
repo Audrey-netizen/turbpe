@@ -8,7 +8,7 @@
 #BA - bee abundance count
 #BAR - bee abundance count by replicate
 
-#Final linear regression plots!
+#Final linear regression plots
 
 library(ggplot2)
 library(ggpubr)
@@ -117,5 +117,6 @@ anova(uniquesp_tfcr, uniquesp_type)
 # Sun of sq - difference in RSS between 2 models
 #F - f statistic
 #Pr(>F) - p val for F test telling us whether the additional predictor in the second model significantly improves model (should be less than 0.05)
+
 
 
