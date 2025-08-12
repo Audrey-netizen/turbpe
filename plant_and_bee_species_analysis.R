@@ -8,6 +8,62 @@
 #BA - bee abundance count
 #BAR - bee abundance count by replicate
 
+#Final linear regression plots!
+
+library(ggplot2)
+library(ggpubr)
+
+#plant diversity vs bee diversity
+ggplot(bee_sp_r_data, aes(x = UPSR , y = UBSR , color = Type)) +
+  geom_point() +
+  labs(y = "# of Unique Bee Genera per Site and Replicate", x = "# of Unique Plant Species per Site and Replicate") +
+  geom_smooth(method = "lm", se = TRUE,aes(fill = Type), linewidth = 1) +
+  labs(title = "Linear Regression: Bee Genera Diversity ~  Plant Species Diversity + Site Type") +
+  theme_minimal() +
+  theme(text = element_text(size = 18)) +
+  # Add the p-value text
+  annotate(
+    "text",
+    x = -Inf, y = 8.5,
+    label = "P values:\nBee Genera ~ Unique Plant Species: 5.97e-05\nBee Genera ~ Positive Control Site: 0.00224\nBee Genera ~ Treatment Site: 0.003",
+    hjust = 0, vjust = 1,
+    size = 5,
+    color = "black")
+
+#plant diversity vs soil composition
+ggplot(plant_sp_r_data, aes(x = PC1, y = UPSR, color = Type)) +
+  geom_point() +
+  labs(y = "# of Unique Plant Species per Site and Replicate", x = "PC1") +
+  geom_smooth(method = "lm", se = TRUE, aes(fill = Type), linewidth = 1) +
+  labs(title = "Linear Regression: Plant Species Diversity ~ Soil Contamination + Site Type") +
+  theme_minimal() +
+  theme(text = element_text(size = 18)) +
+  annotate(
+    "text",
+    x = -Inf, y = 9.5,
+    label = "P values:\nPlant Diversity ~ Soil Contamination: 0.8166\nPlant Diversity ~ Positive Control Site: 0.000335\nPlant Diversity ~ Treatment Site: 5.64e-07",
+    hjust = 0, vjust = 1,
+    size = 5,
+    color = "black")
+
+#plant diversity vs bee abundance 
+ggplot(bee_sp_r_data, aes(x = UPSR , y = BAR , color = Type)) +
+  geom_point() +
+  labs(y = "Bee Abundance per Site and Replicate", x = "# of Unique Plant Species per Site and Replicate") +
+  geom_smooth(method = "lm", se = TRUE, aes(fill = Type),linewidth = 1) +
+  labs(title = "Linear Regression: Bee Abundance ~ Plant Species Diversity + Site Type") +
+  theme_minimal() +
+  theme(text = element_text(size = 18)) +
+  annotate(
+    "text",
+    x = -Inf, y = 30,
+    label = "P values:\nBee Abundance ~ Unique Plant Species: 0.0417\nBee Abundance ~ Total Flower Count: 0.8610\nBee Abundance ~ Positive Control Site: 3.26e-05\nBee Abundance ~ Treatment Site: 0.011",
+    hjust = 0, vjust = 1,
+    size = 5,
+    color = "black")
+
+#linear models of different relationships 
+
 #unique plant species
 plant_sp_data <- read.csv("roadside_pollination_sites - Unique_Plant_Sp.csv", header=TRUE)
 plant_sp_lm <- lm(UPS ~ PC1 + Type, data=plant_sp_data)
@@ -38,6 +94,7 @@ bee_abundance_r_data <- read.csv("roadside_pollination_sites - Unique_Bee_Sp_R.c
 bee_abundance_r_lm <- lm(BAR ~ UPSR + TFCR + Type, data=bee_sp_r_data)
 summary(bee_abundance_r_lm)
 
+#misc.
 
 cor(bee_sp_data$UBS, bee_sp_data$UPS) #0.48
 cor(bee_sp_data$UBS, bee_sp_data$TFC) #0.5
@@ -60,4 +117,5 @@ anova(uniquesp_tfcr, uniquesp_type)
 # Sun of sq - difference in RSS between 2 models
 #F - f statistic
 #Pr(>F) - p val for F test telling us whether the additional predictor in the second model significantly improves model (should be less than 0.05)
+
 
