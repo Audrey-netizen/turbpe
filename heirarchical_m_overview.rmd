@@ -1,6 +1,0 @@
-aka heirarchical linear regression
-from what I can tell, for this poster the data can be very simple?
-  just compare linear models, gradually adding a variable to each
-    ... well, that depends on the scope of our data...
-  harder part arguably is visualization, not just making it
-  possible but deciding which is approriate for this poster
