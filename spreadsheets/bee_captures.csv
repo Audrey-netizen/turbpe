@@ -1,5 +1,4 @@
-TURBPE_BeeData_8th_rep(data_bee_captures),,,,,,,,,,,,,,,,,,,
-Plant ID,Site,Time,Date,Unique_Field_ ID ,Replicate,Family,Genus,Species,Unique ID,drying,etc,Column1,Column2,Column3,Column4,Column5,Column6,Column7,Column8
+Plant ID,Site,Time,Date,Unique_Field_ID,Replicate,Family,Genus,Species,Unique_ID,drying,sex,,,,,,,,
 56,WP1,14:11,3/6/25,56WP1_14:11_3/6/25,2,Andrenidae,Andrena,,,,,,,,,,,,
 44,GT2,14:03,16/6/25,44GT2_14:03_16/6/25,2,Andrenidae,Andrena,,,,,,,,,,,,
 73,DT2,16:35,25/6/25,73DT2_16:35_25/6/25,3,Andrenidae,Andrena,,,,,,,,,,,,
@@ -1363,4 +1362,5 @@ Plant ID,Site,Time,Date,Unique_Field_ ID ,Replicate,Family,Genus,Species,Unique 
 ,,,,_00:00_,,,,,,,,,,,,,,,
 ,,,,_00:00_,,,,,,,,,,,,,,,
 ,,,,_00:00_,,,,,,,,,,,,,,,
+
 ,,,,_00:00_,,,,,,,,,,,,,,,
