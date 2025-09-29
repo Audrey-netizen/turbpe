@@ -1,15 +1,28 @@
 Working directory info: IMPORTANT NOTE, keep this directory listing identical
-to minimize setwd errors between devices working on the same repository
+to minimize wd errors between devices working on the same repository
   Yes that means please create a folder called "repos"
 ```{r}
 setwd("~/Documents/repos/turbpe")
 ```
 
+Packages list
+```{r}
+library(readr)
+#apparently this is faster than read.csv? Will try it, hopefully nothing breaks
+
+
+```
+
 Loading up the csv files
 ```{r}
-read.csv("~/Documents/repos/turbpe/spreadsheets/abiotics.csv")
-read.csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv")
-read.csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
-read.csv("~/Documents/repos/turbpe/spreadsheets/Plant_ID_list.csv")
-read.csv("~/Documents/repos/turbpe/spreadsheets/soil.csv")
+abiotics <- read_csv("~/Documents/repos/turbpe/spreadsheets/abiotics.csv")
+bee_captures <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv")
+flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
+plant_IDs <- read_csv("~/Documents/repos/turbpe/spreadsheets/Plant_ID_list.csv")
+soil_data <- read_csv("~/Documents/repos/turbpe/spreadsheets/soil.csv")
 ```
+
+```{r}
+names(bee_captures)
+```
+
