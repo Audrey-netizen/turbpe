@@ -1,0 +1,13 @@
+Working directory info: IMPORTANT NOTE, keep this directory listing as "~/..." 
+to minimize setwd errors between devices working on the same repository
+```{r}
+setwd("~/Documents/turbpe_R_code")
+```
+
+Loading up the csv files
+```{r}
+read.csv("~/Documents/turbpe_R_code/Plant_ID_Species - Sheet1.csv")
+read.csv("~/Documents/turbpe_R_code/TURBPE_BeeData_all_physicals(data_bee_captures).csv")
+read.csv("~/Documents/turbpe_R_code/turbpe_flowering_units_July29.csv")
+read.csv("~/Documents/turbpe_R_code/data_abiotic_8th_rep.csv")
+```
