@@ -5,25 +5,133 @@ to minimize wd errors between devices working on the same repository
 setwd("~/Documents/repos/turbpe")
 ```
 
-Packages list
+Packages list, plus Audrey's versions of each package
+  I didn't make it mandatory to download a specific version of each package as I
+  don't want anyone to make redundant downloads, just commented what I'm using
+  FYI Andrew we should pretty much always be using the same versions of packages
+  since we're both on macbook M4 silicone chips, so this should never be
+  something to worry about for you
 ```{r}
-library(readr)
+library(dplyr) #V1.1.4
+library(ggplot2) #V4.0.0
+library(lavaan) #V0.6-20
+#library(piecewiseSEM)
+library(readr) #V2.1.5
 #apparently this is faster than read.csv? Will try it, hopefully nothing breaks
-
-library(dplyr)
+library(vegan) #V2.7-1
 
 ```
 
-Loading up the csv files
+Loading up the csv files + assigning them variables
 ```{r}
 abiotics <- read_csv("~/Documents/repos/turbpe/spreadsheets/abiotics.csv")
-bee_captures <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv")
 flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
 plant_IDs <- read_csv("~/Documents/repos/turbpe/spreadsheets/Plant_ID_list.csv")
 soil_data <- read_csv("~/Documents/repos/turbpe/spreadsheets/soil.csv")
+road_widths <- read_csv("~/Documents/repos/turbpe/spreadsheets/road_widths.csv")
+
+#for bee captures we need to further filter it to only include the 8 replicates
+#being used for conference presentations (thanks Andrew :3)
+bee_captures_8th <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv") %>%
+  filter(Replicate >= 1 & Replicate <= 8)
+```
+
+Just for my own viewing purposes here, makes rest easier
+```{r}
+names(bee_captures)
+```
+
+What the heck is a glipmse
+```{r}
+glimpse(abiotics)
+glimpse(flowers)
+glimpse(plant_IDs)
+glimpse(road_widths)
+# No really, I tried using this function now, it's giving nothing. I would
+# rather just directly look at the csv files...
+```
+
+Basic summaries of bees we caught, starting with family
+```{r}
+family_summary <- bee_captures_8th %>%
+  count(Family, name = "Count") %>%
+  arrange(desc(Count))
+
+print(family_summary)
+
+genus_summary <- bee_captures_8th %>%
+  count(Genus, name = "Count") %>%
+  arrange(desc(Count))
+
+print(genus_summary)
+
+#No surprises, this upcoming one is gonna be very skewed to a certain species,
+#since we know exactly what species it is as soon as we see an Apis... and we
+#see a lot of Apis. Functionally useless bit of code rn but it's fun
+species_summary <- bee_captures_8th %>%
+  count(Species, name = "Count") %>%
+  arrange(desc(Count))
+
+print(species_summary)
 ```
 
 ```{r}
-names(bee_captures)
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
 ```
 
