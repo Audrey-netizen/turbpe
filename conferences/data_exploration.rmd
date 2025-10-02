@@ -38,7 +38,11 @@ bee_captures_8th <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures
 
 Just for my own viewing purposes here, makes rest easier
 ```{r}
-names(bee_captures)
+names(bee_captures_8th)
+names(abiotics)
+names(flowers)
+names(plant_IDs)
+names(road_widths)
 ```
 
 What the heck is a glipmse
@@ -73,6 +77,15 @@ species_summary <- bee_captures_8th %>%
   arrange(desc(Count))
 
 print(species_summary)
+```
+
+Baseline for organizing plant data
+```{r}
+
+flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
+# I believe this is functionally useless, so may be removed later, but for now I
+# want to keep up the priority of any given column titles being from the flowers
+# spreadsheet... at the moment there is a lot of identitical titling
 ```
 
 ```{r}
