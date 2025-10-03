@@ -197,25 +197,96 @@ Baseline for organizing plant data
 ```{r}
 
 flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
+plant_IDs <- read_csv("~/Documents/repos/turbpe/spreadsheets/Plant_ID_list.csv")
 # I believe this is functionally useless, so may be removed later, but for now I
-# want to keep up the priority of any given column titles being from the flowers
-# spreadsheet... at the moment there is a lot of identitical titling
+# think it helps remind readers which datasets we are working with coming up
 ```
 
 ```{r}
+# Removing potential duplicates...this is such a flop. I shouldn't have any as
+# of now in this RMD document but this is probably a good thing to do when
+# you're chucking a bunch of lines of code for making figures?
+plant_IDs <- plant_IDs[!duplicated(plant_IDs$ID), ]
 
+# Create a proper taxonomic name column in plant_id_list
+plant_IDs$Taxonomic_Name <- ifelse(
+  !is.na(plant_IDs$Genus) & plant_IDs$Genus != "" & 
+  !is.na(plant_IDs$Species) & plant_IDs$Species != "",
+  paste(plant_IDs$Genus, plant_IDs$Species),
+  as.character(plant_IDs$ID)  # Keep ID as character if no taxonomic name
+)
 ```
 
 ```{r}
+# Remove any duplicate rows from plant_id_list to avoid merge issues
+plant_IDs <- plant_IDs[!duplicated(plant_IDs$ID), ]
 
+# Create a proper taxonomic name column in plant_id_list
+plant_IDs$Taxonomic_Name <- ifelse(
+  !is.na(plant_IDs$Genus) & plant_IDs$Genus != "" & 
+  !is.na(plant_IDs$Species) & plant_IDs$Species != "",
+  paste(plant_IDs$Genus, plant_IDs$Species),
+  as.character(plant_IDs$ID)  # Keep ID as character if no taxonomic name
+)
 ```
 
 ```{r}
+# Merge the flowers data with taxonomic names
+flowers_with_taxonomy <- merge(
+  flowers,
+  plant_IDs[, c("ID", "Taxonomic_Name")],
+  by.x = "Species ID",  # Use the exact column name with space
+  by.y = "ID",
+  all.x = TRUE
+)
 
+# For Species IDs that didn't match, keep the original ID
+flowers_with_taxonomy$Taxonomic_Name <- ifelse(
+  is.na(flowers_with_taxonomy$Taxonomic_Name),
+  as.character(flowers_with_taxonomy$`Species ID`),  # Note the backticks for column names with spaces
+  flowers_with_taxonomy$Taxonomic_Name
+)
 ```
 
+Most frequent flowering plants observed across all sites... to a certain amount
+anyways, we still need this thing to be yknow eyeball friendly
 ```{r}
+# Oh boy time to call/create a variable again
+# this is important to set up the actual quantities that we observe each unique
+# species for the following bits of code
+observation_counts <- flowers_with_taxonomy %>%
+  count(Taxonomic_Name, name = "Observation_Count") %>%
+  arrange(desc(Observation_Count))
 
+# Go to top 20 because top 100 is kinda hard to read/look at
+top_species <- observation_counts %>%
+  top_n(20, Observation_Count) %>%
+  arrange(desc(Observation_Count))
+
+# Making the plot, same colourblind-friendly style as last time
+ggplot(top_species, aes(x = reorder(Taxonomic_Name, Observation_Count), 
+                        y = Observation_Count, 
+                        fill = Taxonomic_Name)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +  # Colourblind-friendly <3
+  coord_flip() +
+  labs(
+    title = "Top 20 Most Frequently Observed Plant Species
+    (All Sites)",
+    x = "Plant Species", 
+    y = "Number of Observations"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    axis.title = element_text(size = 12, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    legend.position = "none",  # Legend would be bloat
+    plot.margin = margin(1, 1, 1, 1.5, "cm"),
+    panel.grid.major.y = element_blank()  # No horizontal grids plz
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
 ```
 
 ```{r}
