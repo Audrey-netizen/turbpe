@@ -221,7 +221,7 @@ plant_IDs$Taxonomic_Name <- ifelse(
 # Remove any duplicate rows from plant_id_list to avoid merge issues
 plant_IDs <- plant_IDs[!duplicated(plant_IDs$ID), ]
 
-# Create a proper taxonomic name column in plant_id_list
+# Create a proper taxonomic name column in plant_IDs
 plant_IDs$Taxonomic_Name <- ifelse(
   !is.na(plant_IDs$Genus) & plant_IDs$Genus != "" & 
   !is.na(plant_IDs$Species) & plant_IDs$Species != "",
@@ -231,19 +231,19 @@ plant_IDs$Taxonomic_Name <- ifelse(
 ```
 
 ```{r}
-# Merge the flowers data with taxonomic names
+# Merging flowers data with taxonomic names
 flowers_with_taxonomy <- merge(
   flowers,
   plant_IDs[, c("ID", "Taxonomic_Name")],
-  by.x = "Species ID",  # Use the exact column name with space
+  by.x = "Species ID",  
   by.y = "ID",
   all.x = TRUE
 )
 
-# For Species IDs that didn't match, keep the original ID
+# For Species IDs that didn't match, keeping original ID
 flowers_with_taxonomy$Taxonomic_Name <- ifelse(
   is.na(flowers_with_taxonomy$Taxonomic_Name),
-  as.character(flowers_with_taxonomy$`Species ID`),  # Note the backticks for column names with spaces
+  as.character(flowers_with_taxonomy$`Species ID`),
   flowers_with_taxonomy$Taxonomic_Name
 )
 ```
@@ -289,21 +289,184 @@ ggplot(top_species, aes(x = reorder(Taxonomic_Name, Observation_Count),
   scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
 ```
 
+Do the same but sorted for treatment, positive and negative control
 ```{r}
+# Making different categories from the second letter of the "Site" column
+flowers_with_taxonomy <- flowers_with_taxonomy %>%
+  mutate(Treatment_Type = case_when(
+    grepl("^.[Tt]", Site) ~ "Treatment",
+    grepl("^.[Nn]", Site) ~ "Negative Control", 
+    grepl("^.[Pp]", Site) ~ "Positive Control",
+    TRUE ~ "Other"
+  ))
 
+# Calling observation variables again to cause less repetitive code
+observation_counts_by_treatment <- flowers_with_taxonomy %>%
+  count(Treatment_Type, Taxonomic_Name, name = "Observation_Count") %>%
+  arrange(Treatment_Type, desc(Observation_Count))
+
+# Top 20 species for each treatment type
+top_species_by_treatment <- observation_counts_by_treatment %>%
+  group_by(Treatment_Type) %>%
+  top_n(20, Observation_Count) %>%
+  arrange(Treatment_Type, desc(Observation_Count)) %>%
+  ungroup()
+
+# Create a function to make the plot for each treatment type
+create_treatment_plot <- function(treatment_data, treatment_name) {
+  ggplot(treatment_data, aes(x = reorder(Taxonomic_Name, Observation_Count), 
+                            y = Observation_Count, 
+                            fill = Taxonomic_Name)) +
+    geom_bar(stat = "identity") +
+    scale_fill_viridis_d() +
+    coord_flip() +
+    labs(
+      title = paste("Top 20 Species -", treatment_name),
+      x = "Plant Species", 
+      y = "Number of Observations"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(size = 10),
+      axis.text.y = element_text(size = 10),
+      axis.title = element_text(size = 12, face = "bold"),
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      legend.position = "none",
+      plot.margin = margin(1, 1, 1, 1.5, "cm"),
+      panel.grid.major.y = element_blank()
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+}
+
+# Plots for each treatment type
+treatment_plots <- list()
+
+treatment_plots$treatment <- create_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Treatment"),
+  "Treatment"
+)
+
+treatment_plots$negative <- create_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Negative Control"),
+  "Negative Control"
+)
+
+treatment_plots$positive <- create_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Positive Control"),
+  "Positive Control"
+)
+
+treatment_plots$treatment
+treatment_plots$negative  
+treatment_plots$positive
 ```
 
+I think there is a good reason to log transform some data here, the treatment
+and positive control seem to have more similar distributions of plant species
 ```{r}
+# log10 version of the plotting function
+create_treatment_plot_log <- function(treatment_data, treatment_name) {
+  ggplot(treatment_data, aes(x = reorder(Taxonomic_Name, Observation_Count), 
+                            y = Observation_Count + 1,
+                            fill = Taxonomic_Name)) +
+    geom_bar(stat = "identity") +
+    scale_fill_viridis_d() +
+    scale_y_log10() +  
+    coord_flip() +
+    labs(
+      title = paste("Top 20 Species -", treatment_name, "(Log10 Scale)"),
+      x = "Plant Species", 
+      y = "Number of Observations + 1 (Log10)"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(size = 10),
+      axis.text.y = element_text(size = 10),
+      axis.title = element_text(size = 12, face = "bold"),
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      legend.position = "none",
+      plot.margin = margin(1, 1, 1, 1.5, "cm"),
+      panel.grid.major.y = element_blank()
+    )
+}
 
+# log10 plots for Treatment and Positive Control
+log_treatment_plot <- create_treatment_plot_log(
+  top_species_by_treatment %>% filter(Treatment_Type == "Treatment"),
+  "Treatment"
+)
+
+log_positive_plot <- create_treatment_plot_log(
+  top_species_by_treatment %>% filter(Treatment_Type == "Positive Control"),
+  "Positive Control"
+)
+
+log_treatment_plot
+log_positive_plot
 ```
 
+Trying to get something out of these log distributions... I was taught
+permanova across like 3 different ecology classes and in Eryn's biostats course
+so it must be useful for something, right?
 ```{r}
+#I'm going to be honest I still kinda have no idea how this matrix stuff works
+# TwT, or maybe I do conceptually but whenever I try to think about it more it
+# gets blurry
+comm_matrix_sites <- flowers_with_taxonomy %>%
+  filter(Treatment_Type %in% c("Treatment", "Positive Control")) %>%
+  count(Site, Taxonomic_Name, name = "Count") %>%
+  pivot_wider(names_from = Taxonomic_Name, values_from = Count, values_fill = 0) %>%
+  column_to_rownames("Site") %>%
+  as.matrix()
 
+# Make treatment groups variable to use for actually doing the permanova 
+treatment_groups <- flowers_with_taxonomy %>%
+  filter(Treatment_Type %in% c("Treatment", "Positive Control")) %>%
+  distinct(Site, Treatment_Type) %>%
+  arrange(Site) %>%
+  pull(Treatment_Type)
+
+# The thing
+permanova_result <- adonis2(comm_matrix_sites ~ treatment_groups, 
+                           method = "bray",
+                           permutations = 999)  # Increase permutations for better p-value
+
+print(permanova_result)
 ```
 
+Permanova for treatment vs negative just to really rub it in (or uh, be
+scientifically principled, whatever that means)
 ```{r}
 
+# Have to add this bit in before basically just copy paste since I am bringing
+# in the negative control data in a new context
+site_counts_neg_treat <- flowers_with_taxonomy %>%
+  filter(Treatment_Type %in% c("Treatment", "Negative Control")) %>%
+  distinct(Site, Treatment_Type) %>%
+  count(Treatment_Type)
+
+print(site_counts_neg_treat)
+
+comm_matrix_neg_treat <- flowers_with_taxonomy %>%
+  filter(Treatment_Type %in% c("Treatment", "Negative Control")) %>%
+  count(Site, Taxonomic_Name, name = "Count") %>%
+  pivot_wider(names_from = Taxonomic_Name, values_from = Count, values_fill = 0) %>%
+  column_to_rownames("Site") %>%
+  as.matrix()
+
+treatment_groups_neg_treat <- flowers_with_taxonomy %>%
+  filter(Treatment_Type %in% c("Treatment", "Negative Control")) %>%
+  distinct(Site, Treatment_Type) %>%
+  arrange(Site) %>%
+  pull(Treatment_Type)
+
+permanova_neg_treat <- adonis2(comm_matrix_neg_treat ~ treatment_groups_neg_treat, 
+                              method = "bray",
+                              permutations = 999)
+
+print(permanova_neg_treat)
 ```
+
 
 ```{r}
 
