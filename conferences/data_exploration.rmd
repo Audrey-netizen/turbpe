@@ -156,6 +156,43 @@ for (i in 1:length(months)) {
 # the plot a variable
 ```
 
+I wonder if converting to log scales will give anything of value, likely not
+worth it with the monthly ones as the data is limited... eh it's probably worth
+it but I can't be bothered for now
+```{r}
+genus_summary <- bee_captures_8th %>%
+  count(Genus, name = "Count") %>%
+  arrange(desc(Count))
+
+# Honestly I'm still trying to figure out why these two lines of code are here,
+# for now they serve the purpose of assigning a variable we proceed to use and
+# setting up our log10 with count of +1 scale/format, but ehhhh I feel like this
+# can be written more efficiently, I'm just not good enough for it atm
+genus_summary_log <- genus_summary %>%
+  mutate(LogCount = log10(Count + 1))
+
+# Make the plot
+ggplot(genus_summary_log, aes(x = reorder(Genus, -Count), y = LogCount, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +  # Colourblind-friendly <3
+  labs(
+    title = "Bee Genera Captured (Log Scale)",
+    x = "Genus",
+    y = "Log10(Count + 1)"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    axis.text.y = element_text(size = 10),
+    axis.title = element_text(size = 12, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    legend.position = "none",  # Legend would be bloat
+    plot.margin = margin(1, 1, 1, 1.5, "cm"),  # Slight margins change
+    panel.grid.major.x = element_blank()  # No grids plz
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+```
+
 Baseline for organizing plant data
 ```{r}
 
