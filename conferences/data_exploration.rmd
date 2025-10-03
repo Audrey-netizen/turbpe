@@ -15,9 +15,11 @@ Packages list, plus Audrey's versions of each package
 library(dplyr) #V1.1.4
 library(ggplot2) #V4.0.0
 library(lavaan) #V0.6-20
-#library(piecewiseSEM)
+library(piecewiseSEM) #V2.3.1
 library(readr) #V2.1.5
 #apparently this is faster than read.csv? Will try it, hopefully nothing breaks
+library(scales) #V1.4.0
+library(tidyverse) #V2.0.0
 library(vegan) #V2.7-1
 
 ```
@@ -69,14 +71,89 @@ genus_summary <- bee_captures_8th %>%
 
 print(genus_summary)
 
-#No surprises, this upcoming one is gonna be very skewed to a certain species,
-#since we know exactly what species it is as soon as we see an Apis... and we
-#see a lot of Apis. Functionally useless bit of code rn but it's fun
+# No surprises, this upcoming one is gonna be very skewed to a certain species,
+# since we know exactly what species it is as soon as we see an Apis... and we
+# see a lot of Apis. Functionally useless bit of code rn but it's fun
 species_summary <- bee_captures_8th %>%
   count(Species, name = "Count") %>%
   arrange(desc(Count))
 
 print(species_summary)
+```
+
+Figure for this summary, will stick with just genus for now
+```{r}
+
+# This bit is redundant but I think it helps with clarity!
+genus_summary <- bee_captures_8th %>%
+  count(Genus, name = "Count") %>%
+  arrange(desc(Count))
+
+# Bar plot
+# theme_minimal wow so cool, why doesn't everyone use this?
+    # UI designers ranting about people being upset at them simplifying
+    # in a nutshell hehe
+ggplot(genus_summary, aes(x = reorder(Genus, -Count), y = Count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +  # Colourblind-friendly <3
+  labs(
+    title = "Bee Genera Captured",
+    x = "Genus",
+    y = "Number of Captures"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    axis.text.y = element_text(size = 10),
+    axis.title = element_text(size = 12, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    legend.position = "none",  # Legend would be bloat
+    plot.margin = margin(1, 1, 1, 1.5, "cm"),  # Slight margins change
+    panel.grid.major.x = element_blank()  # No grids plz
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+```
+
+Repeat this but across four months
+```{r}
+# This is the important part, actually sorts out the month categories I desire
+# for visibility purposes
+months <- c("05", "06", "07", "08")
+month_names <- c("May", "June", "July", "August")
+
+# Ok this is an important part too... this for loop simultaneously is what sorts
+# through the above months sections made and also makes it so all four figures
+# are output in quick succession without copy pasting this four times :)
+for (i in 1:length(months)) {
+  month_data <- bee_captures_8th %>%
+    filter(str_detect(Date, paste0("-", months[i], "-"))) %>%
+    count(Genus, name = "Count") %>%
+    arrange(desc(Count))
+  
+  p <- ggplot(month_data, aes(x = reorder(Genus, -Count), y = Count, fill = Genus)) +
+    geom_bar(stat = "identity") +
+    scale_fill_viridis_d() +
+    labs(
+      title = paste("Bee Genera Captured -", month_names[i]),
+      x = "Genus",
+      y = "Number of Captures"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+      axis.text.y = element_text(size = 10),
+      axis.title = element_text(size = 12, face = "bold"),
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      legend.position = "none",
+      plot.margin = margin(1, 1, 1, 1.5, "cm"),
+      panel.grid.major.x = element_blank()
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+  
+  print(p)
+}
+# Now that we're using a for loop we actually are assigning this production of
+# the plot a variable
 ```
 
 Baseline for organizing plant data
