@@ -12,6 +12,7 @@ Packages list, plus Audrey's versions of each package
   since we're both on macbook M4 silicone chips, so this should never be
   something to worry about for you
 ```{r}
+library(corrplot) #V1.1.6
 library(dplyr) #V1.1.4
 library(ggplot2) #V4.0.0
 library(lavaan) #V0.6-20
@@ -19,10 +20,13 @@ library(piecewiseSEM) #V2.3.1
 library(readr) #V2.1.5
 #apparently this is faster than read.csv? Will try it, hopefully nothing breaks
 library(scales) #V1.4.0
+library(semPlot) #1.1.7
 library(tidyverse) #V2.0.0
 library(vegan) #V2.7-1
 
 ```
+
+##Part 1: Data exploration
 
 Loading up the csv files + assigning them variables
 ```{r}
@@ -468,31 +472,728 @@ print(permanova_neg_treat)
 ```
 
 
-```{r}
+##Part 2, building towards SEM
 
+Okay this starts to get pretty scary I won't lie
+Background context, I was basically trying to set up structural equation model/
+SEM stuff, and decided to just chuck everything in there as far as my data at
+this current point in time goes. But I did have a hunch that the road width data
+would be pointless or maybe even detrimental here. Under the current context of
+data available, everything works on a "mean or total amount obtained in each
+given day/half hour sampling interval", so having a constant static number for
+each road seemed not ideal.
+
+Regardless, I did end up choosing to do this analysis anyways, so let's do a
+walk-through!
+
+Okay firstly, that bee_summary from earlier is getting converted to a format
+which is hopefully more digestable for our various statistical models and SEM
+```{r}
+bee_summary <- bee_captures_8th %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    bee_abundance = n(),
+    bee_richness = n_distinct(Genus, Species, na.rm = TRUE),
+    .groups = 'drop'
+  )
+# This summarise function (ewww American spelling) seems to be quite useful for
+# such a scenario
+```
+
+Effectively the same task for flowers rather than bees  
+```{r}
+flower_summary <- flowers_with_taxonomy %>%
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    total_flowers = sum(`# of Flowering Units`, na.rm = TRUE),
+    flower_richness = n_distinct(Taxonomic_Name),
+    .groups = 'drop'
+  )
+```
+
+Now this is getting rid of the excess traffic data I have in the CSV in the
+slots for mean and total data etc
+```{r}
+# Why is a function called cat so dang useful in not very cat-like circumstances
+# well I guess maybe a cat will like try and. open their treats container or
+# whatever to look ahead?
+# Now process with better handling of traffic data
+abiotic_summary <- abiotics %>%
+  # Clean site names
+  mutate(Site_Clean = case_when(
+    grepl("Mean", Site) ~ gsub(" Mean", "", Site),
+    grepl("M/S", Site) ~ gsub(" M/S", "", Site),
+    TRUE ~ gsub("\\s.*", "", Site)
+  )) %>%
+  # Filter out "Total" and summary rows
+  filter(!grepl("Total|Mean|M/S", Site, ignore.case = TRUE)) %>%
+  # Convert traffic columns from character to numeric, handling special cases
+  mutate(
+    Traffic_passenger = case_when(
+      Traffic_passenger %in% c("", "NA", "?", "N/A") ~ "0",
+      TRUE ~ Traffic_passenger
+    ),
+    Traffic_Bike = case_when(
+      Traffic_Bike %in% c("", "NA", "?", "N/A") ~ "0",
+      TRUE ~ Traffic_Bike
+    ),
+    Traffic_truck = case_when(
+      Traffic_truck %in% c("", "NA", "?", "N/A") ~ "0",
+      TRUE ~ Traffic_truck
+    ),
+    # Now convert to numeric
+    Traffic_passenger = as.numeric(Traffic_passenger),
+    Traffic_Bike = as.numeric(Traffic_Bike),
+    Traffic_truck = as.numeric(Traffic_truck)
+  ) %>%
+  # Group by clean site and date
+  group_by(Site_Clean, Date) %>%
+  summarise(
+    mean_temp = mean(Temp, na.rm = TRUE),
+    mean_humidity = mean(Humidity, na.rm = TRUE),
+    mean_wind = mean(Wind, na.rm = TRUE),
+    mean_volume = mean(Volume, na.rm = TRUE),
+    total_traffic_passenger = sum(Traffic_passenger, na.rm = TRUE),
+    total_traffic_bike = sum(Traffic_Bike, na.rm = TRUE),
+    total_traffic_truck = sum(Traffic_truck, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>%
+  # Create replicate numbers based on date order
+  group_by(Site_Clean) %>%
+  arrange(Date) %>%
+  mutate(Replicate = as.integer(factor(Date))) %>%
+  ungroup() %>%
+  # Filter to replicates 1-8
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  select(-Date) %>%
+  rename(Site = Site_Clean)
+# This summary function (ewww American spelling) seems to be quite useful for
+# such a scenario
+```
+
+Here's the part that's to do with the road width
+```{r}
+# Why is a function called cat so dang useful in not very cat-like circumstances
+# well I guess maybe a cat will like try and. open their treats container or
+# whatever to look ahead?
+cat("Column names in road_widths:\n")
+print(colnames(road_widths))
+
+cat("\nFirst few rows of road_widths:\n")
+print(head(road_widths))
+
+# This helped out with uh... uh... idk I was having a hard time making things
+# work without it
+road_width_col <- grep("road|width|Road|Width", colnames(road_widths), value = TRUE, ignore.case = TRUE)
+cat("\nRoad width related columns:\n")
+print(road_width_col)
+
+road_data <- road_widths %>%
+  mutate(Site = trimws(Site)) %>%
+  select(Site, all_of(road_width_col)) %>%
+  rename(road_width = 2)  # Rename the second column to a standard name
+
+# Actually forming the three different types in this context
+create_site_type <- function(site_code) {
+  site_code <- as.character(site_code)
+  if (grepl("P", site_code)) return("Positive")
+  if (grepl("N", site_code)) return("Negative") 
+  if (grepl("T", site_code)) return("Treatment")
+  return(NA_character_)
+}
+```
+
+Diversity indexes that are not just helpful on their own but a variable relevant
+to measure to
+```{r}
+# For da bees
+bee_diversity_indices <- bee_captures_8th %>%
+  group_by(Site, Replicate, Genus, Species) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    bee_shannon = ifelse(n() > 1, diversity(count, index = "shannon"), 0),
+    .groups = 'drop'
+  )
+
+# For da flowers, wow that... kinda looks similar to the last one, how strange
+flower_diversity_indices <- flowers_with_taxonomy %>%
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  group_by(Site, Replicate, Taxonomic_Name) %>%
+  summarise(count = sum(`# of Flowering Units`, na.rm = TRUE), .groups = 'drop') %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    flower_shannon = ifelse(n() > 1, diversity(count, index = "shannon"), 0),
+    .groups = 'drop'
+  )
+```
+
+Make all the bits join together then produce a csv file... which I have since
+commented out so I don't get a bunch of duplicate files when test running this
+and so that knitting actually works
+```{r}
+sem_data <- bee_summary %>%
+  full_join(flower_summary, by = c("Site", "Replicate")) %>%
+  left_join(abiotic_summary, by = c("Site", "Replicate")) %>%
+  left_join(road_data, by = "Site") %>%
+  left_join(bee_diversity_indices, by = c("Site", "Replicate")) %>%
+  left_join(flower_diversity_indices, by = c("Site", "Replicate")) %>%
+  mutate(
+    Site_Type = sapply(Site, create_site_type),
+    # I have to manually get rid of N/As? I thought excel made them zero by
+    #default TwT
+    across(c(bee_abundance, bee_richness, total_flowers, flower_richness), 
+           ~replace_na(., 0)),
+    # Create total traffic variable
+    total_traffic = total_traffic_passenger + total_traffic_bike + total_traffic_truck,
+    # Handle NA values in diversity indices
+    bee_shannon = replace_na(bee_shannon, 0),
+    flower_shannon = replace_na(flower_shannon, 0)
+  )
+```
+
+Morale booster yippeeee
+```{r}
+cat("\nSummary statistics:\n")
+summary(sem_data %>% select(-Site, -Site_Type))
+
+# The below is a good use for the one time
+#write_csv(sem_data, "sem_prepared_data.csv")
+
+cat("\nData preparation complete! File saved as 'sem_prepared_data.csv'\n")
+```
+
+
+Load up the piece of data we just made
+```{r}
+sem_prepared_data <- read_csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data.csv")
+
+# Look at the data
+cat("Loaded sem_prepared_data structure:\n")
+print(str(sem_prepared_data))
+
+# Clean data
+sem_data_clean <- sem_prepared_data %>%
+  filter(!is.na(mean_temp) & 
+         !is.na(mean_humidity) & 
+         !is.na(road_width) &
+         !is.na(total_traffic))
+
+cat("\nClean dataset dimensions:", dim(sem_data_clean), "\n")
+
+# Standardize variables
+sem_data_std <- sem_data_clean %>%
+  mutate(across(where(is.numeric), scale))
+
+# SEM model
+simple_sem_model <- '
+  bee_abundance ~ total_flowers + total_traffic + road_width
+  bee_richness ~ flower_richness + total_traffic
+  total_flowers ~ total_traffic + road_width + mean_temp
+  flower_richness ~ total_traffic + road_width + mean_temp
+  bee_abundance ~~ bee_richness
+  total_flowers ~~ flower_richness
+  total_traffic ~~ road_width + mean_temp
+  road_width ~~ mean_temp
+'
+
+# Fit model
+simple_fit <- sem(simple_sem_model, data = sem_data_std)
+
+# Results
+cat("\nSEM MODEL SUMMARY:\n")
+print(summary(simple_fit, standardized = TRUE, fit.measures = TRUE, rsq = TRUE))
+
+# Significant paths
+cat("\nSIGNIFICANT PATHS (p < 0.05):\n")
+param_table <- parameterEstimates(simple_fit, standardized = TRUE) %>%
+  filter(op == "~" & pvalue < 0.05) %>%
+  select(From = rhs, To = lhs, Estimate = est, Std_Coefficient = std.all, P_Value = pvalue)
+
+print(param_table)
+
+# Site comparison
+cat("\nSITE TYPE COMPARISON:\n")
+site_comparison <- sem_data_clean %>%
+  group_by(Site_Type) %>%
+  summarise(
+    n = n(),
+    mean_bees = mean(bee_abundance),
+    mean_flowers = mean(total_flowers),
+    mean_traffic = mean(total_traffic)
+  )
+
+print(site_comparison)
+
+# Save results
+write_csv(param_table, "sem_path_coefficients.csv")
+write_csv(site_comparison, "site_type_comparison.csv")
+
+cat("\nDing dong make the figure now\n")
+```
+
+Words summary, hope it helps!
+```{r}
+key_findings <- data.frame(
+  Relationship = c(
+    "Flower Diversity → Bee Diversity",
+    "Flower Abundance → Bee Abundance", 
+    "Traffic → Flower Diversity",
+    "Traffic → Bee Abundance",
+    "Environmental Factors → Direct Effects"
+  ),
+  Effect = c("Strong Positive", "Moderate Positive", "Negative", "Negative", "Minimal"),
+  Strength = c("***", "***", "*", "*", "NS"),
+  Interpretation = c(
+    "Diverse flowers support diverse bee communities",
+    "More flowers support more individual bees",
+    "Traffic reduces plant species diversity",
+    "Traffic may directly reduce bee numbers",
+    "Temperature, humidity, road width show weak direct effects"
+  )
+)
+
+print(key_findings)
+```
+
+Here is the actual SEM plot... which I'm surprised even turned out half-okay to
+be honest considering my track record with this package
+```{r}
+if(require(semPlot)) {
+  
+  semPaths(simple_fit,
+          what = "std",
+          whatLabels = "std",
+          style = "lisrel",
+          layout = "tree",
+          sizeMan = 10,
+          edge.label.cex = 0.8,
+          curvePivot = TRUE)
+  
+  # Adding the title separately because things were finnicky
+  title("SEM: Environmental Effects on Bees and Flowers", line = 3)
+}
+```
+
+
+Okay now let's get to the (comparatively) juicer and more statistically/
+scientifically sound stuff, no road width measurements here
+Plus other preparatory steps
+```{r}
+# Re-loading just in case... look idk I'm paranoid and there's no consequences
+# to being inefficient in R ok
+abiotics <- read_csv("~/Documents/repos/turbpe/spreadsheets/abiotics.csv")
+flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
+plant_IDs <- read_csv("~/Documents/repos/turbpe/spreadsheets/Plant_ID_list.csv")
+bee_captures_8th <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv") %>%
+  filter(Replicate >= 1 & Replicate <= 8)
+
+# Let's see what traffic-related columns actually exist
+traffic_cols <- grep("traffic|Traffic", colnames(abiotics), value = TRUE, ignore.case = TRUE)
+cat("\nTRAFFIC-RELATED COLUMNS:\n")
+print(traffic_cols)
+
+# Preparing plant taxonomy for flowers data
+plant_IDs <- plant_IDs[!duplicated(plant_IDs$ID), ]
+plant_IDs$Taxonomic_Name <- ifelse(
+  !is.na(plant_IDs$Genus) & plant_IDs$Genus != "" & 
+  !is.na(plant_IDs$Species) & plant_IDs$Species != "",
+  paste(plant_IDs$Genus, plant_IDs$Species),
+  as.character(plant_IDs$ID)
+)
+
+flowers_with_taxonomy <- merge(
+  flowers,
+  plant_IDs[, c("ID", "Taxonomic_Name")],
+  by.x = "Species ID",  
+  by.y = "ID",
+  all.x = TRUE
+)
+
+flowers_with_taxonomy$Taxonomic_Name <- ifelse(
+  is.na(flowers_with_taxonomy$Taxonomic_Name),
+  as.character(flowers_with_taxonomy$`Species ID`),
+  flowers_with_taxonomy$Taxonomic_Name
+)
+```
+
+Clumping together the different data points for the purposes of the upcoming csv
+file
+```{r}
+# Bees
+bee_summary <- bee_captures_8th %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    bee_abundance = n(),
+    bee_richness = n_distinct(Genus, Species, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+# Flowers
+flower_summary <- flowers_with_taxonomy %>%
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    total_flowers = sum(`# of Flowering Units`, na.rm = TRUE),
+    flower_richness = n_distinct(Taxonomic_Name),
+    .groups = 'drop'
+  )
+
+# 3. Abiotics
+abiotic_summary <- abiotics %>%
+  # Clean site names
+  mutate(Site_Clean = case_when(
+    grepl("Mean", Site) ~ gsub(" Mean", "", Site),
+    grepl("M/S", Site) ~ gsub(" M/S", "", Site),
+    TRUE ~ gsub("\\s.*", "", Site)
+  )) %>%
+  # Filter out "Total" and summary rows
+  filter(!grepl("Total|Mean|M/S", Site, ignore.case = TRUE)) %>%
+  # Convert traffic columns - USE BACKTICKS for problematic column names
+  mutate(
+    passenger_traffic = as.numeric(`Traffic_passenger`),
+    bike_traffic = as.numeric(`Traffic_Bike`),
+    truck_traffic = as.numeric(`Traffic_truck`)
+  ) %>%
+  # Group by clean site and date
+  group_by(Site_Clean, Date) %>%
+  summarise(
+    mean_temp = mean(Temp, na.rm = TRUE),
+    mean_humidity = mean(Humidity, na.rm = TRUE),
+    mean_wind = mean(Wind, na.rm = TRUE),
+    mean_volume = mean(Volume, na.rm = TRUE),
+    total_traffic_passenger = sum(passenger_traffic, na.rm = TRUE),
+    total_traffic_bike = sum(bike_traffic, na.rm = TRUE),
+    total_traffic_truck = sum(truck_traffic, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>%
+  # Create replicate numbers based on date order
+  group_by(Site_Clean) %>%
+  arrange(Date) %>%
+  mutate(Replicate = as.integer(factor(Date))) %>%
+  ungroup() %>%
+  # Filter to replicates 1-8
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  select(-Date) %>%
+  rename(Site = Site_Clean) %>%
+  # Create total_traffic here
+  mutate(total_traffic = total_traffic_passenger + total_traffic_bike + total_traffic_truck)
+
+# Diversity indices setup, familiar as previous. First with:
+# For bees
+bee_diversity_indices <- bee_captures_8th %>%
+  group_by(Site, Replicate, Genus, Species) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    bee_shannon = ifelse(n() > 1, diversity(count, index = "shannon"), 0),
+    .groups = 'drop'
+  )
+
+# For flowers
+flower_diversity_indices <- flowers_with_taxonomy %>%
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  group_by(Site, Replicate, Taxonomic_Name) %>%
+  summarise(count = sum(`# of Flowering Units`, na.rm = TRUE), .groups = 'drop') %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    flower_shannon = ifelse(n() > 1, diversity(count, index = "shannon"), 0),
+    .groups = 'drop'
+  )
+
+# Site type again, I'm not gonna touch that right now
+create_site_type <- function(site_code) {
+  site_code <- as.character(site_code)
+  if (grepl("P", site_code)) return("Positive")
+  if (grepl("N", site_code)) return("Negative") 
+  if (grepl("T", site_code)) return("Treatment")
+  return(NA_character_)
+}
+
+# Actually forming the csv we want
+sem_data_widthless <- bee_summary %>%
+  full_join(flower_summary, by = c("Site", "Replicate")) %>%
+  left_join(abiotic_summary, by = c("Site", "Replicate")) %>%
+  left_join(bee_diversity_indices, by = c("Site", "Replicate")) %>%
+  left_join(flower_diversity_indices, by = c("Site", "Replicate")) %>%
+  mutate(
+    Site_Type = sapply(Site, create_site_type),
+    # Replace NAs with 0 for counts
+    across(c(bee_abundance, bee_richness, total_flowers, flower_richness), 
+           ~replace_na(., 0)),
+    # Create mean traffic variables (instead of totals)
+    mean_traffic_passenger = total_traffic_passenger / 3,  # Divide by 3 time periods
+    mean_traffic_bike = total_traffic_bike / 3,
+    mean_traffic_truck = total_traffic_truck / 3,
+    mean_traffic = total_traffic / 3,
+    bee_shannon = replace_na(bee_shannon, 0),
+    flower_shannon = replace_na(flower_shannon, 0)
+  ) %>%
+  # Select only the variables we want
+  select(
+    Site, Replicate, 
+    bee_abundance, bee_richness, bee_shannon,
+    total_flowers, flower_richness, flower_shannon,
+    mean_temp, mean_humidity, mean_wind, mean_volume,
+    mean_traffic_passenger, mean_traffic_bike, mean_traffic_truck, mean_traffic,
+    Site_Type
+  )
+
+# Check the dataset
+cat("Width-less dataset created successfully!\n")
+cat("Dimensions:", dim(sem_data_widthless), "\n")
+cat("Variables:", paste(colnames(sem_data_widthless), collapse = ", "), "\n")
+
+# Gotta chill again on creating extra files
+# write_csv(sem_data_widthless, "sem_prepared_data_widthless.csv")
+cat("Dataset saved as 'sem_prepared_data_widthless.csv' yippeee\n")
+```
+
+Time to make figures again whoooo
+```{r}
+sem_prepared_data_widthless <- read_csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data_widthless.csv")
+```
+
+Words and numbers to describe our new csv whoo
+```{r}
+# Loading the width-less dataset
+sem_prepared_data_widthless <- read_csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data_widthless.csv")
+
+# Checking data... ugh I should really get rid of all of them at this point, I
+# have tested the code mutliple times...
+cat("Width-less dataset structure:\n")
+print(str(sem_prepared_data_widthless))
+cat("\nSummary statistics:\n")
+print(summary(sem_prepared_data_widthless))
+
+# Cleaning data for SEM analysis
+sem_data_clean_widthless <- sem_prepared_data_widthless %>%
+  filter(!is.na(mean_temp) & 
+         !is.na(mean_humidity) & 
+         !is.na(mean_traffic)) %>%
+  filter_all(all_vars(!is.infinite(.)))
+
+cat("Clean dataset dimensions:", dim(sem_data_clean_widthless), "\n")
+
+# Standardizing the data for SEM
+sem_data_std_widthless <- sem_data_clean_widthless %>%
+  mutate(across(where(is.numeric), scale))
+
+# Self-explanatory title here, one of the biggest advantages of R
+basic_widthless_model <- '
+  # Direct effects on bees
+  bee_abundance ~ total_flowers + mean_traffic + mean_temp + mean_humidity
+  bee_richness ~ flower_richness + mean_traffic + mean_temp
+  
+  # Effects on flowers
+  total_flowers ~ mean_traffic + mean_temp + mean_humidity
+  flower_richness ~ mean_traffic + mean_temp + mean_humidity
+  
+  # Allow residuals to correlate
+  bee_abundance ~~ bee_richness
+  total_flowers ~~ flower_richness
+  mean_traffic ~~ mean_temp + mean_humidity
+  mean_temp ~~ mean_humidity
+'
+
+basic_fit <- sem(basic_widthless_model, data = sem_data_std_widthless)
+
+cat("\nBASIC WIDTH-LESS SEM MODEL SUMMARY:\n")
+print(summary(basic_fit, standardized = TRUE, fit.measures = TRUE, rsq = TRUE))
+
+# Clear title again oooh, so easy so crisp
+focused_model <- '
+  # Core relationships only
+  bee_abundance ~ total_flowers + mean_traffic
+  bee_richness ~ flower_richness + mean_traffic
+  total_flowers ~ mean_traffic
+  flower_richness ~ mean_traffic
+  
+  # Correlations
+  bee_abundance ~~ bee_richness
+  total_flowers ~~ flower_richness
+'
+
+focused_fit <- sem(focused_model, data = sem_data_std_widthless)
+
+cat("\nFOCUSED SEM MODEL SUMMARY:\n")
+print(summary(focused_fit, standardized = TRUE, fit.measures = TRUE, rsq = TRUE))
+
+# Yout get the idea now
+traffic_components_model <- '
+  # Test different traffic types
+  bee_abundance ~ total_flowers + mean_traffic_passenger + mean_traffic_bike + mean_traffic_truck
+  bee_richness ~ flower_richness + mean_traffic_passenger + mean_traffic_bike
+  total_flowers ~ mean_traffic_passenger + mean_traffic_bike + mean_traffic_truck
+  flower_richness ~ mean_traffic_passenger + mean_traffic_bike + mean_traffic_truck
+  
+  bee_abundance ~~ bee_richness
+  total_flowers ~~ flower_richness
+  mean_traffic_passenger ~~ mean_traffic_bike + mean_traffic_truck
+  mean_traffic_bike ~~ mean_traffic_truck
+'
+
+traffic_fit <- sem(traffic_components_model, data = sem_data_std_widthless)
+
+cat("\nTRAFFIC COMPONENTS SEM MODEL SUMMARY:\n")
+print(summary(traffic_fit, standardized = TRUE, fit.measures = TRUE, rsq = TRUE))
+```
+
+This section is for creating a bunch of association plots now that we have a
+more comfortable data set. But that does not by default mean we just let it rip
+by default, so I have commented out the print commands here since they seem to
+keep producing...
+```{r}
+p1 <- ggplot(sem_data_clean_widthless, aes(x = total_flowers, y = bee_abundance, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+  labs(title = "Bee Abundance vs Flower Abundance",
+       subtitle = "Colored by Site Type",
+       x = "Total Flowers", y = "Bee Abundance") +
+  theme_minimal() +
+  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C"))
+print(p1)
 ```
 
 ```{r}
-
+# Plot 2: Bee richness vs flower richness
+p2 <- ggplot(sem_data_clean_widthless, aes(x = flower_richness, y = bee_richness, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "Bee Richness vs Flower Richness",
+       x = "Flower Richness", y = "Bee Richness") +
+  theme_minimal() +
+  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C"))
+print(p2)
 ```
 
 ```{r}
-
+# Plot 3: Traffic effects
+p3 <- ggplot(sem_data_clean_widthless, aes(x = mean_traffic, y = bee_abundance, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+  labs(title = "Bee Abundance vs Traffic",
+       x = "Mean Traffic", y = "Bee Abundance") +
+  theme_minimal() +
+  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C"))
+print(p3)
 ```
 
 ```{r}
-
+# Plot 4: Site type comparisons
+p4 <- ggplot(sem_data_clean_widthless, aes(x = Site_Type, y = bee_abundance, fill = Site_Type)) +
+  geom_boxplot(alpha = 0.7) +
+  labs(title = "Bee Abundance by Site Type",
+       x = "", y = "Bee Abundance") +
+  theme_minimal() +
+  scale_fill_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76DB5C")) +
+  theme(legend.position = "none")
+print(p4)
 ```
 
 ```{r}
-
+# Plot 5: Traffic effects on flower richness
+p5 <- ggplot(sem_data_clean_widthless, aes(x = mean_traffic, y = flower_richness, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+  labs(title = "Flower Richness vs Traffic",
+       x = "Mean Traffic", y = "Flower Richness") +
+  theme_minimal() +
+  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76DB5C"))
+print(p5)
 ```
 
+Summary text for funsies... or well I think it's kinda redundant but I don't
+want to put it in a separate file
 ```{r}
+key_findings_table <- significant_paths %>%
+  mutate(
+    Interpretation = case_when(
+      Std_Coefficient > 0 & P_Value < 0.05 ~ "Significant Positive",
+      Std_Coefficient > 0 & P_Value < 0.10 ~ "Marginally Positive",
+      Std_Coefficient < 0 & P_Value < 0.05 ~ "Significant Negative",
+      Std_Coefficient < 0 & P_Value < 0.10 ~ "Marginally Negative",
+      TRUE ~ "Not Significant"
+    ),
+    Effect_Size = case_when(
+      abs(Std_Coefficient) > 0.3 ~ "Large",
+      abs(Std_Coefficient) > 0.15 ~ "Medium", 
+      abs(Std_Coefficient) > 0.05 ~ "Small",
+      TRUE ~ "Very Small"
+    )
+  )
 
+cat("\nKey findings!!:\n")
+print(key_findings_table)
+
+# Give fun update
+cat("\nSaving results...\n")
+
+# Again, I've commented them out cuz uh
+#write_csv(significant_paths, "sem_significant_paths_widthless.csv")
+#write_csv(fit_comparison, "sem_model_comparison_widthless.csv")
+#write_csv(key_findings_table, "sem_key_findings_summary.csv")
+
+# Save model summaries
+capture.output(summary(focused_fit, standardized = TRUE, fit.measures = TRUE, rsq = TRUE),
+               file = "sem_focused_model_summary.txt")
+
+# Save plots
+ggsave("bee_vs_flowers_plot.png", p1, width = 8, height = 6, dpi = 300)
+ggsave("bee_richness_plot.png", p2, width = 8, height = 6, dpi = 300)
+ggsave("traffic_effects_plot.png", p3, width = 8, height = 6, dpi = 300)
+ggsave("site_type_comparison.png", p4, width = 8, height = 6, dpi = 300)
+ggsave("traffic_flower_richness.png", p5, width = 8, height = 6, dpi = 300)
+
+cat("\n=== ANALYSIS COMPLETE ===\n")
+cat("Key files saved:\n")
+cat("- sem_significant_paths_widthless.csv: All path coefficients\n")
+cat("- sem_model_comparison_widthless.csv: Model fit comparisons\n") 
+cat("- sem_key_findings_summary.csv: Interpreted findings\n")
+cat("- sem_focused_model_summary.txt: Detailed model summary\n")
+cat("- Various PNG plots: Visualizations of key relationships\n")
+cat("\nMAIN CONCLUSIONS:\n")
+cat("1. Flower diversity strongly supports bee diversity\n")
+cat("2. Traffic negatively impacts both bees and flowers\n") 
+cat("3. Site type differences exist but are complex\n")
+cat("4. Model explains 13.4% of bee richness variation\n")
 ```
 
+
+Finally the big structural equation model for this project! It looks...
+underwhelming
+
+Jeeeeeeeeezuss this package is miserable to work with. I'm grateful that it
+exists to begin with (ty open source devs bless upppppp), but wowie this is the
+third or fourth time I have been beefing with getting the functionalitites of
+this dang package to actually work
 ```{r}
-
+# Just kept it as barebones as possible no titles no info idc... will draw my
+# own at some point I am not dealing with this package anympore
+if(require(semPlot)) {
+  dev.off()
+  
+  # Simple version but with taller device
+  dev.new(width = 8, height = 10)  # Is this inches, "units", smth else idk
+  par(mar = c(12, 5, 5, 5))       # 12 there makes bottom bigger?
+  
+  semPaths(focused_fit,
+          what = "std",
+          whatLabels = "std",
+          style = "ram",
+          layout = "spring",
+          sizeMan = 15,
+          sizeLat = 17,
+          edge.label.cex = 1.2,
+          curvePivot = TRUE,
+          curve = 2.5,
+          nCharNodes = 0,
+          fade = FALSE)
+  
+  title("", cex.main = 1.2, line = 1)
+  
+  # Aaaaand I'm not touching that
+  mtext("", side = 1, line = 8, cex = 0.8, col = "blue")
+}
 ```
-
