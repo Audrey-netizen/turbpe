@@ -24,7 +24,7 @@ ID,Genus,Species
 26,Zizia,aurea
 27,Fritillaria,imperialis
 28,Solidago,canadensis
-29,Lamium,purpurneum*
+29,Lamium,purpurneum
 30,Alliaria,petiolata
 34,Arctium,minus
 36,Asclepias,verticillata
@@ -55,7 +55,7 @@ ID,Genus,Species
 68,Lotus,corniculatus
 69,Alliaria,petiolata
 70,Convolvulus,arvensis
-71,Erigeron,spp
+71,Erigeron,sp
 73,Vicia,cracca
 74,Leucanthemum,vulgare
 75,Allium,cristophii
@@ -76,7 +76,7 @@ ID,Genus,Species
 100,Securigera,varia
 101,Achillea,millefolium
 102,Leucanthemum,vulgare
-102,Leucanthemum,spp
+102,Leucanthemum,sp
 103,Tripleurospermum,inodorum
 104,Rosa,rugosa
 105,Ranunculus,acris
@@ -96,7 +96,7 @@ ID,Genus,Species
 118,Matricaria,discoidea
 119,Leucanthemum,x superbum
 119,Leucanthemum,"x ""Superbum"""
-120,Symphoricarpos,spp
+120,Symphoricarpos,sp
 121,Cirsium,arvense
 122,Echium,vulgare
 123,Echinacea,pallida
@@ -115,7 +115,7 @@ ID,Genus,Species
 138,,
 139,Plantago,major
 140,Symphyotrichum,puniceum
-141,Pycnanthemum virginianum,
+141,Pycnanthemum,virginianum
 142,Erigeron,annuus
 143,Coreopsis,lamceolata
 144,Allium,senescens
@@ -124,7 +124,7 @@ ID,Genus,Species
 147,Gaillardia,"x grandiflora ""Mesa Yellow"""
 148,Helianthus,annuus
 149,Alcea,rosea
-150,Oenothera,
+150,Oenothera,sp
 151,Leucanthemum,chrysanthemum
 152,Euphorbia,helioscopia
 153,Persicaria,maculosa
@@ -133,39 +133,39 @@ ID,Genus,Species
 155,Echinacea,"""Balsomenco"""
 156,Verbena,"canadensis ""Homestead Hot Pink"""
 157,Achillea,millefolium
-158,,
+158,,sp
 159,Zizia,aurea
 160,Solidago,altissima
-161,Rudbeckia,spp
+161,Rudbeckia,sp
 162,Spergularia,media
 163,Heliopsis,helianthoides
 164,Agastache,foeniculum
 165,Oenothera,biennis
-166,Dervilla,
-167,Achillea,
+166,Dervilla,sp
+167,Achillea,sp
 168,Erigeron,canadensis
 169,Helianthus,tuberosus
 170,Ageratina,altissima
 171,Erigeron,annuus
 172,Echinacea,purpurea
-173,Zinnia,
+173,Zinnia,sp
 174,Rudbeckia,fludiga*
 175,Artemisia,vulgaris
-176,Verbena,spp
+176,Verbena,sp
 177,Scabiosa,columbaria
-178,Agastache,spp
+178,Agastache,sp
 179,Oxalis,corniculata
-180,Rudbeckia,spp
+180,Rudbeckia,sp
 181,Pycanthemum,virginianum*
 182,Euthamia,graminifolia
 183,Rudbeckia,laciniata
 184,Linaria,vulgaris
 185,Salvia,nemorosa
 186,Cosmos,bipinnatus
-187,Coreopsis,lanceolata*
+187,Coreopsis,sp
 188,Tagetes,patula
-189,Rudbeckia p,hirta*
+189,Rudbeckia p,sp
 194,Picris,hieracoides
-195,Solidago?,
+195,Solidago?,sp
 196,Chelone,glabra
 197,Symphyotrichum,novae-angliae
