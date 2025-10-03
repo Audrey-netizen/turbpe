@@ -1,3 +1,8 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
 Working directory info: IMPORTANT NOTE, keep this directory listing identical
 to minimize wd errors between devices working on the same repository
   Yes that means please create a folder called "repos"
@@ -1104,60 +1109,77 @@ p5 <- ggplot(sem_data_clean_widthless, aes(x = mean_traffic, y = flower_richness
 print(p5)
 ```
 
-Summary text for funsies... or well I think it's kinda redundant but I don't
-want to put it in a separate file
+Going to be honest I don't care for most of this text, but it does help me knit!
+Or well, I ended up creating a variable which is later mandatory here
 ```{r}
-key_findings_table <- significant_paths %>%
-  mutate(
-    Interpretation = case_when(
-      Std_Coefficient > 0 & P_Value < 0.05 ~ "Significant Positive",
-      Std_Coefficient > 0 & P_Value < 0.10 ~ "Marginally Positive",
-      Std_Coefficient < 0 & P_Value < 0.05 ~ "Significant Negative",
-      Std_Coefficient < 0 & P_Value < 0.10 ~ "Marginally Negative",
-      TRUE ~ "Not Significant"
-    ),
-    Effect_Size = case_when(
-      abs(Std_Coefficient) > 0.3 ~ "Large",
-      abs(Std_Coefficient) > 0.15 ~ "Medium", 
-      abs(Std_Coefficient) > 0.05 ~ "Small",
-      TRUE ~ "Very Small"
-    )
-  )
+cat("\n===~ KEY NUMERICAL FINDINGS ~===\n")
 
-cat("\nKey findings!!:\n")
-print(key_findings_table)
+# Honestly I don't even remember how I got to creating this variable
+fit_comparison <- tibble(
+  Model = c("Basic", "Focused", "Traffic_Components"),
+  chisq = c(fitMeasures(basic_fit, "chisq"), 
+            fitMeasures(focused_fit, "chisq"),
+            fitMeasures(traffic_fit, "chisq")),
+  df = c(fitMeasures(basic_fit, "df"),
+         fitMeasures(focused_fit, "df"),
+         fitMeasures(traffic_fit, "df")),
+  pvalue = c(fitMeasures(basic_fit, "pvalue"),
+             fitMeasures(focused_fit, "pvalue"),
+             fitMeasures(traffic_fit, "pvalue")),
+  cfi = c(fitMeasures(basic_fit, "cfi"),
+          fitMeasures(focused_fit, "cfi"),
+          fitMeasures(traffic_fit, "cfi")),
+  tli = c(fitMeasures(basic_fit, "tli"),
+          fitMeasures(focused_fit, "tli"),
+          fitMeasures(traffic_fit, "tli")),
+  rmsea = c(fitMeasures(basic_fit, "rmsea"),
+            fitMeasures(focused_fit, "rmsea"),
+            fitMeasures(traffic_fit, "rmsea")),
+  srmr = c(fitMeasures(basic_fit, "srmr"),
+           fitMeasures(focused_fit, "srmr"),
+           fitMeasures(traffic_fit, "srmr")),
+  aic = c(fitMeasures(basic_fit, "aic"),
+          fitMeasures(focused_fit, "aic"),
+          fitMeasures(traffic_fit, "aic")),
+  bic = c(fitMeasures(basic_fit, "bic"),
+          fitMeasures(focused_fit, "bic"),
+          fitMeasures(traffic_fit, "bic"))
+)
 
-# Give fun update
-cat("\nSaving results...\n")
+cat("MODEL FIT COMPARISON:\n")
+print(fit_comparison)
 
-# Again, I've commented them out cuz uh
-#write_csv(significant_paths, "sem_significant_paths_widthless.csv")
-#write_csv(fit_comparison, "sem_model_comparison_widthless.csv")
-#write_csv(key_findings_table, "sem_key_findings_summary.csv")
+best_model <- focused_fit  # Based on simplicity and reasonable fit
 
-# Save model summaries
-capture.output(summary(focused_fit, standardized = TRUE, fit.measures = TRUE, rsq = TRUE),
-               file = "sem_focused_model_summary.txt")
+significant_paths <- parameterEstimates(best_model, standardized = TRUE) %>%
+  filter(op == "~") %>%
+  select(From = rhs, To = lhs, Estimate = est, Std_Coefficient = std.all, P_Value = pvalue) %>%
+  arrange(P_Value)
 
-# Save plots
-ggsave("bee_vs_flowers_plot.png", p1, width = 8, height = 6, dpi = 300)
-ggsave("bee_richness_plot.png", p2, width = 8, height = 6, dpi = 300)
-ggsave("traffic_effects_plot.png", p3, width = 8, height = 6, dpi = 300)
-ggsave("site_type_comparison.png", p4, width = 8, height = 6, dpi = 300)
-ggsave("traffic_flower_richness.png", p5, width = 8, height = 6, dpi = 300)
+cat("\nSIGNIFICANT PATHS IN FOCUSED MODEL:\n")
+print(significant_paths)
 
-cat("\n=== ANALYSIS COMPLETE ===\n")
-cat("Key files saved:\n")
-cat("- sem_significant_paths_widthless.csv: All path coefficients\n")
-cat("- sem_model_comparison_widthless.csv: Model fit comparisons\n") 
-cat("- sem_key_findings_summary.csv: Interpreted findings\n")
-cat("- sem_focused_model_summary.txt: Detailed model summary\n")
-cat("- Various PNG plots: Visualizations of key relationships\n")
-cat("\nMAIN CONCLUSIONS:\n")
-cat("1. Flower diversity strongly supports bee diversity\n")
-cat("2. Traffic negatively impacts both bees and flowers\n") 
-cat("3. Site type differences exist but are complex\n")
-cat("4. Model explains 13.4% of bee richness variation\n")
+# R-squared values
+rsq_values <- inspect(best_model, 'r2')
+cat("\nEXPLAINED VARIANCE (R²):\n")
+print(rsq_values)
+
+# Words for key findings
+cat("\n=== KEY INTERPRETATIONS ===\n")
+cat("1. Strongest effects:\n")
+cat("   - Flower richness → Bee richness (β = 0.317, p < 0.001)\n")
+cat("   - Traffic → Bee abundance (β = -0.217, p = 0.010)\n") 
+cat("   - Traffic → Flower richness (β = -0.184, p = 0.033)\n\n")
+
+cat("2. Model performance:\n")
+cat("   - Focused model has reasonable fit (CFI = 0.961)\n")
+cat("   - Explains 13.4% of bee richness variance\n")
+cat("   - Explains 6.1% of bee abundance variance\n\n")
+
+cat("3. Impact of traffic:\n")
+cat("   - Traffic negatively affects both bees and flowers\n")
+cat("   - Passenger traffic shows strongest negative effects\n")
+cat("   - Traffic reduces flower diversity more than flower abundance\n")
 ```
 
 
