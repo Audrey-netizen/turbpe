@@ -766,7 +766,7 @@ Plant ID,Site,Time,Date,Unique_Field_ID,Replicate,Family,Genus,Species,Unique_ID
 13,GT1,11:41,16-07-2025,13GT1_11:41_16/7/25,5,Halictidae,Lasioglossum,,,,,
 115,GT3,13:03,16-07-2025,115GT3_13:03_16/7/25,5,Halictidae,Halictus,ligatus,,,,
 115,GT3,13:11,16-07-2025,115GT3_13:11_16/7/25,5,Halictidae,Lasioglossum,,,,,
-115,GT3,13:13,16-07-2025,115GT3_13:13_16/7/25,5,Halictidae,confusus,,,,,
+115,GT3,13:13,16-07-2025,115GT3_13:13_16/7/25,5,Halictidae,Halictus,confusus,,,,
 115,GT3,13:16,16-07-2025,115GT3_13:16_16/7/25,5,Halictidae,Lasioglossum,,,,,
 124,DP2,13:03,18-07-2025,124DP2_13:03_18/7/25,5,Halictidae,Lasioglossum,,,,,
 42,GT3,13:25,16-07-2025,42GT3_13:25_16/7/25,5,Halictidae,Augochlorella ,,,,,

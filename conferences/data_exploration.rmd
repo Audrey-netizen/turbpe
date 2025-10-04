@@ -1,7 +1,7 @@
 ---
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 Working directory info: IMPORTANT NOTE, keep this directory listing identical
 to minimize wd errors between devices working on the same repository
@@ -732,8 +732,8 @@ site_comparison <- sem_data_clean %>%
 print(site_comparison)
 
 # Save results
-write_csv(param_table, "sem_path_coefficients.csv")
-write_csv(site_comparison, "site_type_comparison.csv")
+#write_csv(param_table, "sem_path_coefficients.csv")
+#write_csv(site_comparison, "site_type_comparison.csv")
 
 cat("\nDing dong make the figure now\n")
 ```
@@ -1057,8 +1057,44 @@ p1 <- ggplot(sem_data_clean_widthless, aes(x = total_flowers, y = bee_abundance,
        subtitle = "Colored by Site Type",
        x = "Total Flowers", y = "Bee Abundance") +
   theme_minimal() +
-  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C"))
+  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C")) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.x = element_text(size = 11, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold")
+  )
 print(p1)
+
+p1.no.outlier <- ggplot(subset(sem_data_clean_widthless, total_flowers<7000), aes(x = total_flowers, y = bee_abundance, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+  labs(title = "Bee Abundance vs Flower Abundance",
+       subtitle = "Colored by Site Type",
+       x = "Total Flowers", y = "Bee Abundance") +
+  theme_minimal() +
+  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C")) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.x = element_text(size = 11, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold")
+  )
+p1.no.outlier
+
+p1.xlog <- ggplot(sem_data_clean_widthless, aes(x = total_flowers + 1, y = bee_abundance, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 2) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+  labs(title = "Bee Abundance vs Flower Abundance",
+       subtitle = "Colored by Site Type",
+       x = "Total Flowers + 1", y = "Bee Abundance") +
+  theme_minimal() +
+  scale_x_log10() +
+  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C")) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.x = element_text(size = 11, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold")
+  )
+p1.xlog
 ```
 
 ```{r}
@@ -1069,7 +1105,12 @@ p2 <- ggplot(sem_data_clean_widthless, aes(x = flower_richness, y = bee_richness
   labs(title = "Bee Richness vs Flower Richness",
        x = "Flower Richness", y = "Bee Richness") +
   theme_minimal() +
-  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C"))
+  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C")) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.x = element_text(size = 11, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold")
+  )
 print(p2)
 ```
 
@@ -1081,7 +1122,12 @@ p3 <- ggplot(sem_data_clean_widthless, aes(x = mean_traffic, y = bee_abundance, 
   labs(title = "Bee Abundance vs Traffic",
        x = "Mean Traffic", y = "Bee Abundance") +
   theme_minimal() +
-  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C"))
+  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C")) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.x = element_text(size = 11, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold")
+  )
 print(p3)
 ```
 
@@ -1093,7 +1139,11 @@ p4 <- ggplot(sem_data_clean_widthless, aes(x = Site_Type, y = bee_abundance, fil
        x = "", y = "Bee Abundance") +
   theme_minimal() +
   scale_fill_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76DB5C")) +
-  theme(legend.position = "none")
+  theme(
+    legend.position = "none",
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold")
+  )
 print(p4)
 ```
 
@@ -1105,7 +1155,12 @@ p5 <- ggplot(sem_data_clean_widthless, aes(x = mean_traffic, y = flower_richness
   labs(title = "Flower Richness vs Traffic",
        x = "Mean Traffic", y = "Flower Richness") +
   theme_minimal() +
-  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76DB5C"))
+  scale_color_manual(values = c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76DB5C")) +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.x = element_text(size = 14, face = "bold"),
+    axis.title.y = element_text(size = 14, face = "bold")
+  )
 print(p5)
 ```
 
