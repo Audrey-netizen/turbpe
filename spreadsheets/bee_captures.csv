@@ -401,7 +401,7 @@ Plant ID,Site,Time,Date,Unique_Field_ID,Replicate,Family,Genus,Species,Unique_ID
 124,GP2,13:32,07-08-2025,124GP2_13:32_7/8/25,7,Apidae,Bombus,,,,,
 114,GP2,10:34,12-08-2025,114GP2_10:34_12/8/25,7,Apidae,Bombus,,,,,
 114,GP2,10:34,12-08-2025,114GP2_10:34_12/8/25,7,Apidae,Bombus,,,,,
-114,DP3,10:35,12-08-2025,114DP3_10:35_12/8/25,7,Apidae,Bombus,,,,,
+114,DP3,10:35 a,12-08-2025,114DP3_10:35 a_12/8/25,7,Apidae,Bombus,,,,,
 163,DP3,10:38,12-08-2025,163DP3_10:38_12/8/25,7,Apidae,Bombus,,,,,
 163,DP3,10:44,12-08-2025,163DP3_10:44_12/8/25,7,Apidae,Bombus,,,,,
 114,DP3,10:47,12-08-2025,114DP3_10:47_12/8/25,7,Apidae,Bombus,,,,,
@@ -1363,4 +1363,5 @@ Plant ID,Site,Time,Date,Unique_Field_ID,Replicate,Family,Genus,Species,Unique_ID
 ,,,,_00:00_,,,,,,,,
 ,,,,_00:00_,,,,,,,,
 ,,,,,,,,,,,,
+
 ,,,,_00:00_,,,,,,,,
