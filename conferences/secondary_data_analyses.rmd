@@ -1,0 +1,33 @@
+Working directory info: IMPORTANT NOTE, keep this directory listing identical
+to minimize wd errors between devices working on the same repository
+  Yes that means please create a folder called "repos"
+```{r}
+setwd("~/Documents/repos/turbpe")
+```
+
+Packages list, plus Audrey's versions of each package
+  I didn't make it mandatory to download a specific version of each package as I
+  don't want anyone to make redundant downloads, just commented what I'm using
+  FYI Andrew we should pretty much always be using the same versions of packages
+  since we're both on macbook M4 silicone chips, so this should never be
+  something to worry about for you
+```{r}
+library(corrplot) #V1.1.6
+library(dplyr) #V1.1.4
+library(ggplot2) #V4.0.0
+library(lavaan) #V0.6-20
+library(piecewiseSEM) #V2.3.1
+library(readr) #V2.1.5
+#apparently this is faster than read.csv? Will try it, hopefully nothing breaks
+library(scales) #V1.4.0
+library(semPlot) #1.1.7
+library(tidyverse) #V2.0.0
+library(vegan) #V2.7-1
+
+```
+
+
+Most frequent bees across sites
+```{r}
+
+````
