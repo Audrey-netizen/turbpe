@@ -1,4 +1,4 @@
-Plant ID,Site,Time,Date,Unique_Field_ID,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
+Plant_ID,Site,Time,Date,Unique_Field_ID,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 56,WP1,14:11,03-06-2025,56WP1_14:11_3/6/25,2,Andrenidae,Andrena,,,,,
 44,GT2,14:03,16-06-2025,44GT2_14:03_16/6/25,2,Andrenidae,Andrena,,,,,
 73,DT2,16:35,25-06-2025,73DT2_16:35_25/6/25,3,Andrenidae,Andrena,,,,,

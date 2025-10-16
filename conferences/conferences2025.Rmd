@@ -1,0 +1,1728 @@
+This is the main reference document for the code used for statistical analysis
+and figure presentation, the goal here is for legibility. Will no longer be used
+after today, as the rest of data analysis will focus on the broader dataset
+including sampling done in September and October, and eventually all bees gotten
+down to species level, and that will be in a different file.
+
+**Working directory info:**
+IMPORTANT NOTE, keep this directory listing identical
+to minimize wd errors between devices working on the same repository
+  Yes that means please create a folder called "repos"
+
+Packages list, plus Audrey's versions of each package
+  I didn't make it mandatory to download a specific version of each package as I
+  don't want anyone to make redundant downloads, just commented what I'm using
+  FYI Andrew we should pretty much always be using the same versions of packages
+  since we're both on macbook M4 silicone chips, so this should never be
+  something to worry about for you
+Extra note: yes I have to list the actual desired versions of packages as a
+comment here rather than an explicit function because R is a flop here and does
+not care about version control across multiple teams like that. There are ways
+to open up packages for your work in the exact version you want, but they are
+relatively finicky and I would not want you (mostly Andrew) to get complications
+from that. Just know, if there is some problem with a package in the future and
+you're not sure why, there's a non-zero chance it may be because it is not the
+version of the package listed below.
+```{r}
+# R itself for this project is version 4.5.1 as of Oct 16th 2025
+library(corrplot) #V1.1.6
+library(dplyr) #V1.1.4
+library(ggplot2) #V4.0.0
+library(ggpubr) #V0.6.1
+# I am pretty sure this package is no longer being used but keeping it here
+library(ggsignif) #V0.6.4
+library(glmmTMB) #V1.1.13
+library(lavaan) #V0.6-20
+library(piecewiseSEM) #V2.3.1
+library(readr) #V2.1.5
+# Apparently this is faster than read.csv? Will try it, hopefully nothing breaks
+# Also I am pretty sure this package is no longer being used but keeping it here
+library(rstatix) #V0.7.2
+# Again this package is no longer being used~ but keeping it here
+library(scales) #V1.4.0
+library(semPlot) #V1.1.7
+library(tidyverse) #V2.0.0
+library(vegan) #V2.7-1
+
+
+```
+
+Loading up the csv files + assigning them variables
+```{r}
+abiotics <- read_csv("~/Documents/repos/turbpe/spreadsheets/abiotics.csv")
+flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
+plant_IDs <- read_csv("~/Documents/repos/turbpe/spreadsheets/Plant_ID_list.csv")
+soil_data <- read_csv("~/Documents/repos/turbpe/spreadsheets/soil.csv")
+road_widths <- read_csv("~/Documents/repos/turbpe/spreadsheets/road_widths.csv")
+
+#for bee captures we need to further filter it to only include the 8 replicates
+#being used for conference presentations (thanks Andrew :3)
+bee_captures_8th <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv") %>%
+  filter(Replicate >= 1 & Replicate <= 8)
+```
+
+Basic summaries of bees we caught, starting with family
+```{r}
+family_summary <- bee_captures_8th %>%
+  count(Family, name = "Count") %>%
+  arrange(desc(Count))
+
+print(family_summary)
+
+genus_summary <- bee_captures_8th %>%
+  count(Genus, name = "Count") %>%
+  arrange(desc(Count))
+
+print(genus_summary)
+
+# No surprises, this upcoming one is gonna be very skewed to a certain species,
+# since we know exactly what species it is as soon as we see an Apis... and we
+# see a lot of Apis. Functionally useless bit of code rn but it's fun
+species_summary <- bee_captures_8th %>%
+  count(Species, name = "Count") %>%
+  arrange(desc(Count))
+
+print(species_summary)
+```
+
+Figure for this summary, will stick with just genus for now
+```{r}
+
+# This bit is redundant but I think it helps with clarity!
+genus_summary <- bee_captures_8th %>%
+  count(Genus, name = "Count") %>%
+  arrange(desc(Count))
+
+# Bar plot
+# theme_minimal wow so cool, why doesn't everyone use this?
+    # UI designers ranting about people being upset at them simplifying
+    # in a nutshell hehe
+ggplot(genus_summary, aes(x = reorder(Genus, -Count), y = Count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +  # Colourblind-friendly <3
+  labs(
+    title = "Bee Genera Captured",
+    x = "Genus",
+    y = "Number of Captures"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    axis.text.y = element_text(size = 10),
+    axis.title = element_text(size = 12, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    legend.position = "none",  # Legend would be bloat
+    plot.margin = margin(1, 1, 1, 1.5, "cm"),  # Slight margins change
+    panel.grid.major.x = element_blank()  # No grids plz
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+```
+
+Repeat this but across four months
+```{r}
+# This is the important part, actually sorts out the month categories I desire
+# for visibility purposes
+months <- c("05", "06", "07", "08")
+month_names <- c("May", "June", "July", "August")
+
+# Ok this is an important part too... this for loop simultaneously is what sorts
+# through the above months sections made and also makes it so all four figures
+# are output in quick succession without copy pasting this four times :)
+for (i in 1:length(months)) {
+  month_data <- bee_captures_8th %>%
+    filter(str_detect(Date, paste0("-", months[i], "-"))) %>%
+    count(Genus, name = "Count") %>%
+    arrange(desc(Count))
+  
+  p <- ggplot(month_data, aes(x = reorder(Genus, -Count), y = Count, fill = Genus)) +
+    geom_bar(stat = "identity") +
+    scale_fill_viridis_d() +
+    labs(
+      title = paste("Bee Genera Captured -", month_names[i]),
+      x = "Genus",
+      y = "Number of Captures"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+      axis.text.y = element_text(size = 10),
+      axis.title = element_text(size = 12, face = "bold"),
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      legend.position = "none",
+      plot.margin = margin(1, 1, 1, 1.5, "cm"),
+      panel.grid.major.x = element_blank()
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+  
+  print(p)
+}
+# Now that we're using a for loop we actually are assigning this production of
+# the plot a variable
+```
+
+I wonder if converting to log scales will give anything of value, likely not
+worth it with the monthly ones as the data is limited... eh it's probably worth
+it but I can't be bothered for now
+```{r}
+genus_summary <- bee_captures_8th %>%
+  count(Genus, name = "Count") %>%
+  arrange(desc(Count))
+
+# Honestly I'm still trying to figure out why these two lines of code are here,
+# for now they serve the purpose of assigning a variable we proceed to use and
+# setting up our log10 with count of +1 scale/format, but ehhhh I feel like this
+# can be written more efficiently, I'm just not good enough for it atm
+genus_summary_log <- genus_summary %>%
+  mutate(LogCount = log10(Count + 1))
+
+# Make the plot
+ggplot(genus_summary_log, aes(x = reorder(Genus, -Count), y = LogCount, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +  # Colourblind-friendly <3
+  labs(
+    title = "Bee Genera Captured (Log Scale)",
+    x = "Genus",
+    y = "Log10(Count + 1)"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    axis.text.y = element_text(size = 10),
+    axis.title = element_text(size = 12, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    legend.position = "none",  # Legend would be bloat
+    plot.margin = margin(1, 1, 1, 1.5, "cm"),  # Slight margins change
+    panel.grid.major.x = element_blank()  # No grids plz
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+```
+
+Baseline for organizing plant data
+```{r}
+
+flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
+plant_IDs <- read_csv("~/Documents/repos/turbpe/spreadsheets/Plant_ID_list.csv")
+# I believe this is functionally useless, so may be removed later, but for now I
+# think it helps remind readers which datasets we are working with coming up
+```
+
+```{r}
+# Removing potential duplicates...this is such a flop. I shouldn't have any as
+# of now in this RMD document but this is probably a good thing to do when
+# you're chucking a bunch of lines of code for making figures?
+plant_IDs <- plant_IDs[!duplicated(plant_IDs$ID), ]
+
+# Create a proper taxonomic name column in plant_id_list
+plant_IDs$Taxonomic_Name <- ifelse(
+  !is.na(plant_IDs$Genus) & plant_IDs$Genus != "" & 
+  !is.na(plant_IDs$Species) & plant_IDs$Species != "",
+  paste(plant_IDs$Genus, plant_IDs$Species),
+  as.character(plant_IDs$ID)  # Keep ID as character if no taxonomic name
+)
+```
+
+```{r}
+# Remove any duplicate rows from plant_id_list to avoid merge issues
+plant_IDs <- plant_IDs[!duplicated(plant_IDs$ID), ]
+
+# Create a proper taxonomic name column in plant_IDs
+plant_IDs$Taxonomic_Name <- ifelse(
+  !is.na(plant_IDs$Genus) & plant_IDs$Genus != "" & 
+  !is.na(plant_IDs$Species) & plant_IDs$Species != "",
+  paste(plant_IDs$Genus, plant_IDs$Species),
+  as.character(plant_IDs$ID)  # Keep ID as character if no taxonomic name
+)
+```
+
+```{r}
+# Merging flowers data with taxonomic names
+flowers_with_taxonomy <- merge(
+  flowers,
+  plant_IDs[, c("ID", "Taxonomic_Name")],
+  by.x = "Species ID",  
+  by.y = "ID",
+  all.x = TRUE
+)
+
+# For Species IDs that didn't match, keeping original ID
+flowers_with_taxonomy$Taxonomic_Name <- ifelse(
+  is.na(flowers_with_taxonomy$Taxonomic_Name),
+  as.character(flowers_with_taxonomy$`Species ID`),
+  flowers_with_taxonomy$Taxonomic_Name
+)
+```
+
+Most frequent flowering plants observed across all sites... to a certain amount
+anyways, we still need this thing to be yknow eyeball friendly
+```{r}
+# Oh boy time to call/create a variable again
+# this is important to set up the actual quantities that we observe each unique
+# species for the following bits of code
+observation_counts <- flowers_with_taxonomy %>%
+  count(Taxonomic_Name, name = "Observation_Count") %>%
+  arrange(desc(Observation_Count))
+
+# Go to top 20 because top 100 is kinda hard to read/look at
+top_species <- observation_counts %>%
+  top_n(20, Observation_Count) %>%
+  arrange(desc(Observation_Count))
+
+# Making the plot, same colourblind-friendly style as last time
+ggplot(top_species, aes(x = reorder(Taxonomic_Name, Observation_Count), 
+                        y = Observation_Count, 
+                        fill = Taxonomic_Name)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +  # Colourblind-friendly <3
+  coord_flip() +
+  labs(
+    title = "Top 20 Most Frequently Observed Plant Species
+    (All Sites)",
+    x = "Plant Species", 
+    y = "Number of Observations"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 10),
+    axis.text.y = element_text(size = 10),
+    axis.title = element_text(size = 12, face = "bold"),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    legend.position = "none",  # Legend would be bloat
+    plot.margin = margin(1, 1, 1, 1.5, "cm"),
+    panel.grid.major.y = element_blank()  # No horizontal grids plz
+  ) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+```
+
+Do the same but sorted for treatment, positive and negative control
+```{r}
+# Making different categories from the second letter of the "Site" column
+flowers_with_taxonomy <- flowers_with_taxonomy %>%
+  mutate(Treatment_Type = case_when(
+    grepl("^.[Tt]", Site) ~ "Treatment",
+    grepl("^.[Nn]", Site) ~ "Negative Control", 
+    grepl("^.[Pp]", Site) ~ "Positive Control",
+    TRUE ~ "Other"
+  ))
+
+# Calling observation variables again to cause less repetitive code
+observation_counts_by_treatment <- flowers_with_taxonomy %>%
+  count(Treatment_Type, Taxonomic_Name, name = "Observation_Count") %>%
+  arrange(Treatment_Type, desc(Observation_Count))
+
+# Top 20 species for each treatment type
+top_species_by_treatment <- observation_counts_by_treatment %>%
+  group_by(Treatment_Type) %>%
+  top_n(20, Observation_Count) %>%
+  arrange(Treatment_Type, desc(Observation_Count)) %>%
+  ungroup()
+
+# Create a function to make the plot for each treatment type
+create_treatment_plot <- function(treatment_data, treatment_name) {
+  ggplot(treatment_data, aes(x = reorder(Taxonomic_Name, Observation_Count), 
+                            y = Observation_Count, 
+                            fill = Taxonomic_Name)) +
+    geom_bar(stat = "identity") +
+    scale_fill_viridis_d() +
+    coord_flip() +
+    labs(
+      title = paste("Top 20 Species -", treatment_name),
+      x = "Plant Species", 
+      y = "Number of Observations"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(size = 10),
+      axis.text.y = element_text(size = 10),
+      axis.title = element_text(size = 12, face = "bold"),
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      legend.position = "none",
+      plot.margin = margin(1, 1, 1, 1.5, "cm"),
+      panel.grid.major.y = element_blank()
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+}
+
+# Plots for each treatment type
+treatment_plots <- list()
+
+treatment_plots$treatment <- create_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Treatment"),
+  "Treatment"
+)
+
+treatment_plots$negative <- create_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Negative Control"),
+  "Negative Control"
+)
+
+treatment_plots$positive <- create_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Positive Control"),
+  "Positive Control"
+)
+
+treatment_plots$treatment
+treatment_plots$negative  
+treatment_plots$positive
+```
+
+I think there is a good reason to log transform some data here, the treatment
+and positive control seem to have more similar distributions of plant species
+```{r}
+# log10 version of the plotting function
+create_treatment_plot_log <- function(treatment_data, treatment_name) {
+  ggplot(treatment_data, aes(x = reorder(Taxonomic_Name, Observation_Count), 
+                            y = Observation_Count + 1,
+                            fill = Taxonomic_Name)) +
+    geom_bar(stat = "identity") +
+    scale_fill_viridis_d() +
+    scale_y_log10() +  
+    coord_flip() +
+    labs(
+      title = paste("Top 20 Species -", treatment_name, "(Log10 Scale)"),
+      x = "Plant Species", 
+      y = "Number of Observations + 1 (Log10)"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(size = 10),
+      axis.text.y = element_text(size = 10),
+      axis.title = element_text(size = 12, face = "bold"),
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      legend.position = "none",
+      plot.margin = margin(1, 1, 1, 1.5, "cm"),
+      panel.grid.major.y = element_blank()
+    )
+}
+
+# log10 plots for Treatment and Positive Control
+log_treatment_plot <- create_treatment_plot_log(
+  top_species_by_treatment %>% filter(Treatment_Type == "Treatment"),
+  "Treatment"
+)
+
+log_positive_plot <- create_treatment_plot_log(
+  top_species_by_treatment %>% filter(Treatment_Type == "Positive Control"),
+  "Positive Control"
+)
+
+log_treatment_plot
+log_positive_plot
+```
+
+Trying to get something out of these log distributions... I was taught
+permanova across like 3 different ecology classes and in Eryn's biostats course
+so it must be useful for something, right?
+```{r}
+#I'm going to be honest I still kinda have no idea how this matrix stuff works
+# TwT, or maybe I do conceptually but whenever I try to think about it more it
+# gets blurry
+comm_matrix_sites <- flowers_with_taxonomy %>%
+  filter(Treatment_Type %in% c("Treatment", "Positive Control")) %>%
+  count(Site, Taxonomic_Name, name = "Count") %>%
+  pivot_wider(names_from = Taxonomic_Name, values_from = Count, values_fill = 0) %>%
+  column_to_rownames("Site") %>%
+  as.matrix()
+
+# Make treatment groups variable to use for actually doing the permanova 
+treatment_groups <- flowers_with_taxonomy %>%
+  filter(Treatment_Type %in% c("Treatment", "Positive Control")) %>%
+  distinct(Site, Treatment_Type) %>%
+  arrange(Site) %>%
+  pull(Treatment_Type)
+
+# The thing
+permanova_result <- adonis2(comm_matrix_sites ~ treatment_groups, 
+                           method = "bray",
+                           permutations = 999)  # Increase permutations for better p-value
+
+print(permanova_result)
+```
+
+Permanova for treatment vs negative just to really rub it in (or uh, be
+scientifically principled, whatever that means)
+```{r}
+
+# Have to add this bit in before basically just copy paste since I am bringing
+# in the negative control data in a new context
+site_counts_neg_treat <- flowers_with_taxonomy %>%
+  filter(Treatment_Type %in% c("Treatment", "Negative Control")) %>%
+  distinct(Site, Treatment_Type) %>%
+  count(Treatment_Type)
+
+print(site_counts_neg_treat)
+
+comm_matrix_neg_treat <- flowers_with_taxonomy %>%
+  filter(Treatment_Type %in% c("Treatment", "Negative Control")) %>%
+  count(Site, Taxonomic_Name, name = "Count") %>%
+  pivot_wider(names_from = Taxonomic_Name, values_from = Count, values_fill = 0) %>%
+  column_to_rownames("Site") %>%
+  as.matrix()
+
+treatment_groups_neg_treat <- flowers_with_taxonomy %>%
+  filter(Treatment_Type %in% c("Treatment", "Negative Control")) %>%
+  distinct(Site, Treatment_Type) %>%
+  arrange(Site) %>%
+  pull(Treatment_Type)
+
+permanova_neg_treat <- adonis2(comm_matrix_neg_treat ~ treatment_groups_neg_treat, 
+                              method = "bray",
+                              permutations = 999)
+
+print(permanova_neg_treat)
+```
+
+PCoA for previous permanova of plants, positive control and treatment
+```{r}
+# Calculate Bray-Curtis distance
+dist_matrix <- vegdist(comm_matrix_sites, method = "bray")
+
+# Perform PCoA
+pcoa_result <- cmdscale(dist_matrix, eig = TRUE, k = 2)
+
+# Extract PCoA scores
+pcoa_scores <- as.data.frame(pcoa_result$points)
+colnames(pcoa_scores) <- c("PCoA1", "PCoA2")
+pcoa_scores$Treatment <- treatment_groups
+pcoa_scores$Site <- rownames(pcoa_scores)
+
+# Calculate variance explained
+variance_explained <- round(pcoa_result$eig / sum(pcoa_result$eig) * 100, 1)
+
+ggplot(pcoa_scores, aes(x = PCoA1, y = PCoA2, color = Treatment)) +
+  geom_point(size = 3) +
+  stat_ellipse(level = 0.95) +
+  geom_text(aes(label = Site), vjust = 1.5, size = 3) +
+  scale_color_manual(values = c("Treatment" = "#7BB33D", "Positive Control" = "#273C73")) +
+  labs(x = paste("PCoA1 (", variance_explained[1], "%)"),
+       y = paste("PCoA2 (", variance_explained[2], "%)"),
+       title = "PCoA: Treatment vs Positive Control",
+       subtitle = paste("PERMANOVA R² =", round(permanova_result$R2[1], 3),
+                       "p =", round(permanova_result$`Pr(>F)`[1], 4))) +
+  theme_minimal()
+```
+
+Okay this starts to get pretty scary I won't lie
+Background context, I was basically trying to set up structural equation model/
+SEM stuff, and decided to just chuck everything in there as far as my data at
+this current point in time goes. But I did have a hunch that the road width data
+would be pointless or maybe even detrimental here. Under the current context of
+data available, everything works on a "mean or total amount obtained in each
+given day/half hour sampling interval", so having a constant static number for
+each road seemed not ideal.
+
+Regardless, I did end up choosing to do this analysis anyways, so let's do a
+walk-through!
+
+Okay firstly, that bee_summary from earlier is getting converted to a format
+which is hopefully more digestable for our various statistical models and SEM
+
+PS: there is no actual SEM model(s) in my conference presentations, so this is
+functionally here as a relic. The code to actually make and show the SEM is not
+here, but there are some chunks in here that create csv files which get used in
+future analyses... I don't want to sort through them in a cleaner way so you
+just get unnecessary chunks of code from here on out, enjoy :)
+```{r}
+bee_summary <- bee_captures_8th %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    bee_abundance = n(),
+    bee_richness = n_distinct(Genus, Species, na.rm = TRUE),
+    .groups = 'drop'
+  )
+# This summarise function (ewww American spelling) seems to be quite useful for
+# such a scenario
+```
+
+Effectively the same task for flowers rather than bees  
+```{r}
+flower_summary <- flowers_with_taxonomy %>%
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    total_flowers = sum(`# of Flowering Units`, na.rm = TRUE),
+    flower_richness = n_distinct(Taxonomic_Name),
+    .groups = 'drop'
+  )
+```
+
+Now this is getting rid of the excess traffic data I have in the CSV in the
+slots for mean and total data etc
+```{r}
+# Why is a function called cat so dang useful in not very cat-like circumstances
+# well I guess maybe a cat will like try and. open their treats container or
+# whatever to look ahead?
+# Now process with better handling of traffic data
+abiotic_summary <- abiotics %>%
+  # Clean site names
+  mutate(Site_Clean = case_when(
+    grepl("Mean", Site) ~ gsub(" Mean", "", Site),
+    grepl("M/S", Site) ~ gsub(" M/S", "", Site),
+    TRUE ~ gsub("\\s.*", "", Site)
+  )) %>%
+  # Filter out "Total" and summary rows
+  filter(!grepl("Total|Mean|M/S", Site, ignore.case = TRUE)) %>%
+  # Convert traffic columns from character to numeric, handling special cases
+  mutate(
+    Traffic_passenger = case_when(
+      Traffic_passenger %in% c("", "NA", "?", "N/A") ~ "0",
+      TRUE ~ Traffic_passenger
+    ),
+    Traffic_Bike = case_when(
+      Traffic_Bike %in% c("", "NA", "?", "N/A") ~ "0",
+      TRUE ~ Traffic_Bike
+    ),
+    Traffic_truck = case_when(
+      Traffic_truck %in% c("", "NA", "?", "N/A") ~ "0",
+      TRUE ~ Traffic_truck
+    ),
+    # Now convert to numeric
+    Traffic_passenger = as.numeric(Traffic_passenger),
+    Traffic_Bike = as.numeric(Traffic_Bike),
+    Traffic_truck = as.numeric(Traffic_truck)
+  ) %>%
+  # Group by clean site and date
+  group_by(Site_Clean, Date) %>%
+  summarise(
+    mean_temp = mean(Temp, na.rm = TRUE),
+    mean_humidity = mean(Humidity, na.rm = TRUE),
+    mean_wind = mean(Wind, na.rm = TRUE),
+    mean_volume = mean(Volume, na.rm = TRUE),
+    total_traffic_passenger = sum(Traffic_passenger, na.rm = TRUE),
+    total_traffic_bike = sum(Traffic_Bike, na.rm = TRUE),
+    total_traffic_truck = sum(Traffic_truck, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>%
+  # Create replicate numbers based on date order
+  group_by(Site_Clean) %>%
+  arrange(Date) %>%
+  mutate(Replicate = as.integer(factor(Date))) %>%
+  ungroup() %>%
+  # Filter to replicates 1-8
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  select(-Date) %>%
+  rename(Site = Site_Clean)
+# This summary function (ewww American spelling) seems to be quite useful for
+# such a scenario
+```
+
+Here's the part that's to do with the road width
+```{r}
+# Why is a function called cat so dang useful in not very cat-like circumstances
+# well I guess maybe a cat will like try and. open their treats container or
+# whatever to look ahead?
+cat("Column names in road_widths:\n")
+print(colnames(road_widths))
+
+cat("\nFirst few rows of road_widths:\n")
+print(head(road_widths))
+
+# This helped out with uh... uh... idk I was having a hard time making things
+# work without it
+road_width_col <- grep("road|width|Road|Width", colnames(road_widths), value = TRUE, ignore.case = TRUE)
+cat("\nRoad width related columns:\n")
+print(road_width_col)
+
+road_data <- road_widths %>%
+  mutate(Site = trimws(Site)) %>%
+  select(Site, all_of(road_width_col)) %>%
+  rename(road_width = 2)  # Rename the second column to a standard name
+
+# Actually forming the three different types in this context
+create_site_type <- function(site_code) {
+  site_code <- as.character(site_code)
+  if (grepl("P", site_code)) return("Positive")
+  if (grepl("N", site_code)) return("Negative") 
+  if (grepl("T", site_code)) return("Treatment")
+  return(NA_character_)
+}
+```
+
+Diversity indexes that are not just helpful on their own but a variable relevant
+to measure to
+```{r}
+# For da bees
+bee_diversity_indices <- bee_captures_8th %>%
+  group_by(Site, Replicate, Genus, Species) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    bee_shannon = ifelse(n() > 1, diversity(count, index = "shannon"), 0),
+    .groups = 'drop'
+  )
+
+# For da flowers, wow that... kinda looks similar to the last one, how strange
+flower_diversity_indices <- flowers_with_taxonomy %>%
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  group_by(Site, Replicate, Taxonomic_Name) %>%
+  summarise(count = sum(`# of Flowering Units`, na.rm = TRUE), .groups = 'drop') %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    flower_shannon = ifelse(n() > 1, diversity(count, index = "shannon"), 0),
+    .groups = 'drop'
+  )
+```
+
+Make all the bits join together then produce a csv file... which I have since
+commented out so I don't get a bunch of duplicate files when test running this
+and so that knitting actually works
+```{r}
+sem_data <- bee_summary %>%
+  full_join(flower_summary, by = c("Site", "Replicate")) %>%
+  left_join(abiotic_summary, by = c("Site", "Replicate")) %>%
+  left_join(road_data, by = "Site") %>%
+  left_join(bee_diversity_indices, by = c("Site", "Replicate")) %>%
+  left_join(flower_diversity_indices, by = c("Site", "Replicate")) %>%
+  mutate(
+    Site_Type = sapply(Site, create_site_type),
+    # I have to manually get rid of N/As? I thought excel made them zero by
+    #default TwT
+    across(c(bee_abundance, bee_richness, total_flowers, flower_richness), 
+           ~replace_na(., 0)),
+    # Create total traffic variable
+    total_traffic = total_traffic_passenger + total_traffic_bike + total_traffic_truck,
+    # Handle NA values in diversity indices
+    bee_shannon = replace_na(bee_shannon, 0),
+    flower_shannon = replace_na(flower_shannon, 0)
+  )
+```
+
+Load up the piece of data we just made
+```{r}
+sem_prepared_data <- read_csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data.csv")
+
+# Look at the data
+cat("Loaded sem_prepared_data structure:\n")
+print(str(sem_prepared_data))
+
+# Clean data
+sem_data_clean <- sem_prepared_data %>%
+  filter(!is.na(mean_temp) & 
+         !is.na(mean_humidity) & 
+         !is.na(road_width) &
+         !is.na(total_traffic))
+
+cat("\nClean dataset dimensions:", dim(sem_data_clean), "\n")
+
+# Standardize variables
+sem_data_std <- sem_data_clean %>%
+  mutate(across(where(is.numeric), scale))
+
+# SEM model
+simple_sem_model <- '
+  bee_abundance ~ total_flowers + total_traffic + road_width
+  bee_richness ~ flower_richness + total_traffic
+  total_flowers ~ total_traffic + road_width + mean_temp
+  flower_richness ~ total_traffic + road_width + mean_temp
+  bee_abundance ~~ bee_richness
+  total_flowers ~~ flower_richness
+  total_traffic ~~ road_width + mean_temp
+  road_width ~~ mean_temp
+'
+
+# Fit model
+simple_fit <- sem(simple_sem_model, data = sem_data_std)
+
+# Results
+cat("\nSEM MODEL SUMMARY:\n")
+print(summary(simple_fit, standardized = TRUE, fit.measures = TRUE, rsq = TRUE))
+
+# Significant paths
+cat("\nSIGNIFICANT PATHS (p < 0.05):\n")
+param_table <- parameterEstimates(simple_fit, standardized = TRUE) %>%
+  filter(op == "~" & pvalue < 0.05) %>%
+  select(From = rhs, To = lhs, Estimate = est, Std_Coefficient = std.all, P_Value = pvalue)
+
+print(param_table)
+
+# Site comparison
+cat("\nSITE TYPE COMPARISON:\n")
+site_comparison <- sem_data_clean %>%
+  group_by(Site_Type) %>%
+  summarise(
+    n = n(),
+    mean_bees = mean(bee_abundance),
+    mean_flowers = mean(total_flowers),
+    mean_traffic = mean(total_traffic)
+  )
+
+print(site_comparison)
+
+# Save results
+# write_csv(param_table, "sem_path_coefficients.csv")
+# write_csv(site_comparison, "site_type_comparison.csv")
+
+cat("\nDing dong make the figure now\n")
+```
+
+Words summary, hope it helps!
+```{r}
+key_findings <- data.frame(
+  Relationship = c(
+    "Flower Diversity → Bee Diversity",
+    "Flower Abundance → Bee Abundance", 
+    "Traffic → Flower Diversity",
+    "Traffic → Bee Abundance",
+    "Environmental Factors → Direct Effects"
+  ),
+  Effect = c("Strong Positive", "Moderate Positive", "Negative", "Negative", "Minimal"),
+  Strength = c("***", "***", "*", "*", "NS"),
+  Interpretation = c(
+    "Diverse flowers support diverse bee communities",
+    "More flowers support more individual bees",
+    "Traffic reduces plant species diversity",
+    "Traffic may directly reduce bee numbers",
+    "Temperature, humidity, road width show weak direct effects"
+  )
+)
+
+print(key_findings)
+```
+
+Okay now let's get to the (comparatively) juicer and more statistically/
+scientifically sound/simple stuff, no road width measurements here
+Plus other preparatory steps
+```{r}
+# Re-loading just in case... look idk I'm paranoid and there's no consequences
+# to being inefficient in R ok
+abiotics <- read_csv("~/Documents/repos/turbpe/spreadsheets/abiotics.csv")
+flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
+plant_IDs <- read_csv("~/Documents/repos/turbpe/spreadsheets/Plant_ID_list.csv")
+bee_captures_8th <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv") %>%
+  filter(Replicate >= 1 & Replicate <= 8)
+
+# Let's see what traffic-related columns actually exist
+traffic_cols <- grep("traffic|Traffic", colnames(abiotics), value = TRUE, ignore.case = TRUE)
+cat("\nTRAFFIC-RELATED COLUMNS:\n")
+print(traffic_cols)
+
+# Preparing plant taxonomy for flowers data
+plant_IDs <- plant_IDs[!duplicated(plant_IDs$ID), ]
+plant_IDs$Taxonomic_Name <- ifelse(
+  !is.na(plant_IDs$Genus) & plant_IDs$Genus != "" & 
+  !is.na(plant_IDs$Species) & plant_IDs$Species != "",
+  paste(plant_IDs$Genus, plant_IDs$Species),
+  as.character(plant_IDs$ID)
+)
+
+flowers_with_taxonomy <- merge(
+  flowers,
+  plant_IDs[, c("ID", "Taxonomic_Name")],
+  by.x = "Species ID",  
+  by.y = "ID",
+  all.x = TRUE
+)
+
+flowers_with_taxonomy$Taxonomic_Name <- ifelse(
+  is.na(flowers_with_taxonomy$Taxonomic_Name),
+  as.character(flowers_with_taxonomy$`Species ID`),
+  flowers_with_taxonomy$Taxonomic_Name
+)
+```
+
+Clumping together the different data points for the purposes of the upcoming csv
+file
+```{r}
+# Bees
+bee_summary <- bee_captures_8th %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    bee_abundance = n(),
+    bee_richness = n_distinct(Genus, Species, na.rm = TRUE),
+    .groups = 'drop'
+  )
+
+# Flowers
+flower_summary <- flowers_with_taxonomy %>%
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    total_flowers = sum(`# of Flowering Units`, na.rm = TRUE),
+    flower_richness = n_distinct(Taxonomic_Name),
+    .groups = 'drop'
+  )
+
+# 3. Abiotics
+abiotic_summary <- abiotics %>%
+  # Clean site names
+  mutate(Site_Clean = case_when(
+    grepl("Mean", Site) ~ gsub(" Mean", "", Site),
+    grepl("M/S", Site) ~ gsub(" M/S", "", Site),
+    TRUE ~ gsub("\\s.*", "", Site)
+  )) %>%
+  # Filter out "Total" and summary rows
+  filter(!grepl("Total|Mean|M/S", Site, ignore.case = TRUE)) %>%
+  # Convert traffic columns - USE BACKTICKS for problematic column names
+  mutate(
+    passenger_traffic = as.numeric(`Traffic_passenger`),
+    bike_traffic = as.numeric(`Traffic_Bike`),
+    truck_traffic = as.numeric(`Traffic_truck`)
+  ) %>%
+  # Group by clean site and date
+  group_by(Site_Clean, Date) %>%
+  summarise(
+    mean_temp = mean(Temp, na.rm = TRUE),
+    mean_humidity = mean(Humidity, na.rm = TRUE),
+    mean_wind = mean(Wind, na.rm = TRUE),
+    mean_volume = mean(Volume, na.rm = TRUE),
+    total_traffic_passenger = sum(passenger_traffic, na.rm = TRUE),
+    total_traffic_bike = sum(bike_traffic, na.rm = TRUE),
+    total_traffic_truck = sum(truck_traffic, na.rm = TRUE),
+    .groups = 'drop'
+  ) %>%
+  # Create replicate numbers based on date order
+  group_by(Site_Clean) %>%
+  arrange(Date) %>%
+  mutate(Replicate = as.integer(factor(Date))) %>%
+  ungroup() %>%
+  # Filter to replicates 1-8
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  select(-Date) %>%
+  rename(Site = Site_Clean) %>%
+  # Create total_traffic here
+  mutate(total_traffic = total_traffic_passenger + total_traffic_bike + total_traffic_truck)
+
+# Diversity indices setup, familiar as previous. First with:
+# For bees
+bee_diversity_indices <- bee_captures_8th %>%
+  group_by(Site, Replicate, Genus, Species) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    bee_shannon = ifelse(n() > 1, diversity(count, index = "shannon"), 0),
+    .groups = 'drop'
+  )
+
+# For flowers
+flower_diversity_indices <- flowers_with_taxonomy %>%
+  filter(Replicate >= 1 & Replicate <= 8) %>%
+  group_by(Site, Replicate, Taxonomic_Name) %>%
+  summarise(count = sum(`# of Flowering Units`, na.rm = TRUE), .groups = 'drop') %>%
+  group_by(Site, Replicate) %>%
+  summarise(
+    flower_shannon = ifelse(n() > 1, diversity(count, index = "shannon"), 0),
+    .groups = 'drop'
+  )
+
+# Site type again, I'm not gonna touch that right now
+create_site_type <- function(site_code) {
+  site_code <- as.character(site_code)
+  if (grepl("P", site_code)) return("Positive")
+  if (grepl("N", site_code)) return("Negative") 
+  if (grepl("T", site_code)) return("Treatment")
+  return(NA_character_)
+}
+
+# Actually forming the csv we want
+sem_data_widthless <- bee_summary %>%
+  full_join(flower_summary, by = c("Site", "Replicate")) %>%
+  left_join(abiotic_summary, by = c("Site", "Replicate")) %>%
+  left_join(bee_diversity_indices, by = c("Site", "Replicate")) %>%
+  left_join(flower_diversity_indices, by = c("Site", "Replicate")) %>%
+  mutate(
+    Site_Type = sapply(Site, create_site_type),
+    # Replace NAs with 0 for counts
+    across(c(bee_abundance, bee_richness, total_flowers, flower_richness), 
+           ~replace_na(., 0)),
+    # Create mean traffic variables (instead of totals)
+    mean_traffic_passenger = total_traffic_passenger / 3,  # Divide by 3 time periods
+    mean_traffic_bike = total_traffic_bike / 3,
+    mean_traffic_truck = total_traffic_truck / 3,
+    mean_traffic = total_traffic / 3,
+    bee_shannon = replace_na(bee_shannon, 0),
+    flower_shannon = replace_na(flower_shannon, 0)
+  ) %>%
+  # Select only the variables we want
+  select(
+    Site, Replicate, 
+    bee_abundance, bee_richness, bee_shannon,
+    total_flowers, flower_richness, flower_shannon,
+    mean_temp, mean_humidity, mean_wind, mean_volume,
+    mean_traffic_passenger, mean_traffic_bike, mean_traffic_truck, mean_traffic,
+    Site_Type
+  )
+
+# Check the dataset
+cat("Width-less dataset created successfully!\n")
+cat("Dimensions:", dim(sem_data_widthless), "\n")
+cat("Variables:", paste(colnames(sem_data_widthless), collapse = ", "), "\n")
+
+# Gotta chill again on creating extra files
+# write_csv(sem_data_widthless, "sem_prepared_data_widthless.csv")
+cat("Dataset saved as 'sem_prepared_data_widthless.csv' yippeee\n")
+```
+
+Time to make figures again whoooo
+```{r}
+sem_prepared_data_widthless <- read_csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data_widthless.csv")
+```
+
+Words and numbers to describe our new csv whoo
+```{r}
+# Loading the width-less dataset
+sem_prepared_data_widthless <- read_csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data_widthless.csv")
+
+# Checking data... ugh I should really get rid of all of them at this point, I
+# have tested the code mutliple times...
+cat("Width-less dataset structure:\n")
+print(str(sem_prepared_data_widthless))
+cat("\nSummary statistics:\n")
+print(summary(sem_prepared_data_widthless))
+
+# Cleaning data for SEM analysis
+sem_data_clean_widthless <- sem_prepared_data_widthless %>%
+  filter(!is.na(mean_temp) & 
+         !is.na(mean_humidity) & 
+         !is.na(mean_traffic)) %>%
+  filter_all(all_vars(!is.infinite(.)))
+
+cat("Clean dataset dimensions:", dim(sem_data_clean_widthless), "\n")
+
+# Standardizing the data for SEM
+sem_data_std_widthless <- sem_data_clean_widthless %>%
+  mutate(across(where(is.numeric), scale))
+
+# Self-explanatory title here, one of the biggest advantages of R
+basic_widthless_model <- '
+  # Direct effects on bees
+  bee_abundance ~ total_flowers + mean_traffic + mean_temp + mean_humidity
+  bee_richness ~ flower_richness + mean_traffic + mean_temp
+  
+  # Effects on flowers
+  total_flowers ~ mean_traffic + mean_temp + mean_humidity
+  flower_richness ~ mean_traffic + mean_temp + mean_humidity
+  
+  # Allow residuals to correlate
+  bee_abundance ~~ bee_richness
+  total_flowers ~~ flower_richness
+  mean_traffic ~~ mean_temp + mean_humidity
+  mean_temp ~~ mean_humidity
+'
+
+basic_fit <- sem(basic_widthless_model, data = sem_data_std_widthless)
+
+cat("\nBASIC WIDTH-LESS SEM MODEL SUMMARY:\n")
+print(summary(basic_fit, standardized = TRUE, fit.measures = TRUE, rsq = TRUE))
+
+# Clear title again oooh, so easy so crisp
+focused_model <- '
+  # Core relationships only
+  bee_abundance ~ total_flowers + mean_traffic
+  bee_richness ~ flower_richness + mean_traffic
+  total_flowers ~ mean_traffic
+  flower_richness ~ mean_traffic
+  
+  # Correlations
+  bee_abundance ~~ bee_richness
+  total_flowers ~~ flower_richness
+'
+
+focused_fit <- sem(focused_model, data = sem_data_std_widthless)
+
+cat("\nFOCUSED SEM MODEL SUMMARY:\n")
+print(summary(focused_fit, standardized = TRUE, fit.measures = TRUE, rsq = TRUE))
+
+# Yout get the idea now
+traffic_components_model <- '
+  # Test different traffic types
+  bee_abundance ~ total_flowers + mean_traffic_passenger + mean_traffic_bike + mean_traffic_truck
+  bee_richness ~ flower_richness + mean_traffic_passenger + mean_traffic_bike
+  total_flowers ~ mean_traffic_passenger + mean_traffic_bike + mean_traffic_truck
+  flower_richness ~ mean_traffic_passenger + mean_traffic_bike + mean_traffic_truck
+  
+  bee_abundance ~~ bee_richness
+  total_flowers ~~ flower_richness
+  mean_traffic_passenger ~~ mean_traffic_bike + mean_traffic_truck
+  mean_traffic_bike ~~ mean_traffic_truck
+'
+
+traffic_fit <- sem(traffic_components_model, data = sem_data_std_widthless)
+
+cat("\nTRAFFIC COMPONENTS SEM MODEL SUMMARY:\n")
+print(summary(traffic_fit, standardized = TRUE, fit.measures = TRUE, rsq = TRUE))
+```
+
+
+The upcoming bits will seem pretty abrupt in change compared to the follow-up
+here... that's because they are! I was doing associations between some variables
+that looked promising on surface level, but the statistical methods I was using
+were not sound plain and simple. Ended up redoing all of them with glmmTMB, and
+that turned out to give pretty similar findings regardless so that's nice! That
+said, I have a loooot of doubts about my statistician chops, so there could very
+well be things I am missing here. This is primary analysis, data was still being
+collected as of this week for the project overall, so my apologies if there are
+for example sources of bias not removed, poor understanding of covariates etc
+
+Also, this stuff upcoming is very repetitive in a bad way, unfortunately I just
+do not currently have the time to make this cleaner/shorter
+
+Redoing a basic boxplot that shows significance stars and the like
+```{r}
+# The amount of giving variable names to read_csv coming up here is really 
+# ticking me off, but to be honest right now the priority is to just get the
+# figures out even if everything is sloppy and redundant... the code will look
+# cool one day! Efficiency doesn't really matter for creating figures in R so I
+# will save that for another data
+data_raw <- read_csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data_widthless.csv")
+
+# Filter and clean data for analysis and plotting
+analysis_data_mean <- data_raw %>%
+  # Filter only three site types
+  filter(Site_Type %in% c("Treatment", "Negative", "Positive")) %>%
+  mutate(
+    # Define order for consistent plotting/modeling after making site type vari.
+    Site_Type = factor(Site_Type, levels = c("Negative", "Treatment", "Positive")),
+    # Using the aggregated daily bee abundance
+    bee_abundance = as.numeric(bee_abundance)
+  ) %>%
+  # Remove rows where key variables are NA or bee abundance is missing
+  filter(!is.na(bee_abundance) & !is.na(Site_Type)) %>%
+  # I don't know why I can't remove thiiiiiis TwT
+  filter(Replicate >= 1 & Replicate <= 8) 
+
+# Colourblind friendly ;)
+custom_colors <- c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C")
+base_theme <- theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.x = element_text(size = 11, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold"),
+    legend.position = "none" # Hide legend as color is redundant with X-axis
+  )
+
+
+# One way anova cuz uh the data is just one variable in three categories? KISS
+anova_results <- aov(bee_abundance ~ Site_Type, data = analysis_data_mean)
+print("--- ANOVA Results ---")
+print(summary(anova_results))
+
+# 2. Tukey's HSD post-hoc test and format for plotting (NOT Turkey womp womp)
+tukey_hsd_results <- analysis_data_mean %>%
+  tukey_hsd(bee_abundance ~ Site_Type) %>%
+  # This is good for showing the *, **, ***
+  add_significance("p.adj") 
+
+print("--- Tukey's HSD Pairwise Comparison Results ---")
+print(tukey_hsd_results)
+
+# More variable labeling yaaaayyyy
+tukey_plot_data <- tukey_hsd_results %>%
+  filter(p.adj <= 0.05) %>% # Only keep significant pairs for visualization
+  mutate(
+    # Map the significance symbols to the label column
+    label = p.adj.signif,
+    # Define the comparison groups (ggsignif expects a list of vectors)
+    comparisons = list(c(group1, group2))
+  ) %>%
+  # Ensure the levels match the plot order
+  filter(group1 != group2)
+
+# This makes the graph less ugly
+max_y <- max(analysis_data_mean$bee_abundance, na.rm = TRUE)
+# Determine the height for the significance brackets based on the max Y value
+y_starts <- c(max_y * 1.15, max_y * 1.3, max_y * 1.45) 
+
+# this again makes the order of the bars not as bad
+tukey_plot_data <- tukey_plot_data %>%
+  arrange(p.adj) %>% 
+  mutate(y.position = y_starts[1:n()]) %>%
+  select(group1, group2, y.position, label)
+
+```
+
+Actual producing of the boxplot here
+```{r}
+p_mean_comparison <- ggplot(analysis_data_mean, aes(x = Site_Type, y = bee_abundance, fill = Site_Type)) +
+  
+  
+  geom_boxplot(alpha = 0.7) +
+  
+  # Apply colours
+  scale_fill_manual(values = custom_colors) +
+  
+  # Add significance bars using ggsignif, reading from the prepared tukey_plot_data
+  # The list of comparisons is created on the fly based on the filtered data
+  geom_signif(
+    comparisons = unique(tukey_plot_data %>% select(group1, group2)) %>% purrr::transpose() %>% purrr::map(unlist),
+    map_signif_level = TRUE, # Automatically uses the symbols (*, **, ***)
+    test = "t.test", # Placeholder test, as we supply the data and labels manually
+    y_position = tukey_plot_data$y.position,
+    annotations = tukey_plot_data$label,
+    tip_length = 0.01
+  ) +
+  
+  # Set final labels and theme
+  labs(
+    title = "Daily Bee Abundance by Site Type",
+    subtitle = "Boxplot shows Median and Quartiles (Tukey's HSD pairwise comparison)",
+    x = "", 
+    y = "Daily Bee Abundance (Count)"
+  ) +
+  
+  # Ensure plot limits accommodate the significance brackets
+  coord_cartesian(ylim = c(0, max(tukey_plot_data$y.position) * 1.1)) +
+  
+  # Apply minimal theme and custom styling
+  base_theme +
+  theme(
+    legend.position = "none"
+  )
+
+print(p_mean_comparison)
+#
+```
+
+Log 10 transformed of previous info to do with the flower diversity at each
+site, but looking at all three categories not just treatment and positive
+```{r}
+# Making different categories from the second letter of the "Site" column
+flowers_with_taxonomy <- flowers_with_taxonomy %>%
+  mutate(Treatment_Type = case_when(
+    grepl("^.[Tt]", Site) ~ "Treatment",
+    grepl("^.[Nn]", Site) ~ "Negative Control", 
+    grepl("^.[Pp]", Site) ~ "Positive Control",
+    TRUE ~ "Other"
+  ))
+
+# Calling observation variables
+observation_counts_by_treatment <- flowers_with_taxonomy %>%
+  count(Treatment_Type, Taxonomic_Name, name = "Observation_Count") %>%
+  arrange(Treatment_Type, desc(Observation_Count))
+
+# Add log10-transform
+observation_counts_by_treatment <- observation_counts_by_treatment %>%
+  mutate(Log10_Observation_Count = log10(Observation_Count + 1))  # +1 to handle zeros
+
+# Top 20 species for each treatment type
+top_species_by_treatment <- observation_counts_by_treatment %>%
+  group_by(Treatment_Type) %>%
+  top_n(20, Observation_Count) %>%
+  arrange(Treatment_Type, desc(Observation_Count)) %>%
+  ungroup()
+
+# Create a function to make the plot for each treatment type
+create_treatment_plot <- function(treatment_data, treatment_name) {
+  ggplot(treatment_data, aes(x = reorder(Taxonomic_Name, Observation_Count), 
+                            y = Observation_Count, 
+                            fill = Taxonomic_Name)) +
+    geom_bar(stat = "identity") +
+    scale_fill_viridis_d() +
+    coord_flip() +
+    labs(
+      title = paste("Top 20 Species -", treatment_name),
+      x = "Plant Species", 
+      y = "Number of Observations"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(size = 10),
+      axis.text.y = element_text(size = 10),
+      axis.title = element_text(size = 12, face = "bold"),
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      legend.position = "none",
+      plot.margin = margin(1, 1, 1, 1.5, "cm"),
+      panel.grid.major.y = element_blank()
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+}
+
+# Create a function for log10-transformed plots
+create_log10_treatment_plot <- function(treatment_data, treatment_name) {
+  ggplot(treatment_data, aes(x = reorder(Taxonomic_Name, Log10_Observation_Count), 
+                            y = Log10_Observation_Count, 
+                            fill = Taxonomic_Name)) +
+    geom_bar(stat = "identity") +
+    scale_fill_viridis_d() +
+    coord_flip() +
+    labs(
+      title = paste("Top 20 Species -", treatment_name, "(Log10 Transformed)"),
+      x = "Plant Species", 
+      y = "Log10 (Number of Observations + 1)"
+    ) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(size = 10),
+      axis.text.y = element_text(size = 10),
+      axis.title = element_text(size = 12, face = "bold"),
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      legend.position = "none",
+      plot.margin = margin(1, 1, 1, 1.5, "cm"),
+      panel.grid.major.y = element_blank()
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
+}
+
+# Original plots for each treatment type... I'm sensing some redundancy here
+# looking over things again...
+treatment_plots <- list()
+
+treatment_plots$treatment <- create_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Treatment"),
+  "Treatment"
+)
+
+treatment_plots$negative <- create_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Negative Control"),
+  "Negative Control"
+)
+
+treatment_plots$positive <- create_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Positive Control"),
+  "Positive Control"
+)
+
+# Log10-transformed plots for each treatment type
+log10_treatment_plots <- list()
+
+log10_treatment_plots$treatment <- create_log10_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Treatment"),
+  "Treatment"
+)
+
+log10_treatment_plots$negative <- create_log10_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Negative Control"),
+  "Negative Control"
+)
+
+log10_treatment_plots$positive <- create_log10_treatment_plot(
+  top_species_by_treatment %>% filter(Treatment_Type == "Positive Control"),
+  "Positive Control"
+)
+
+
+treatment_plots$treatment
+treatment_plots$negative  
+treatment_plots$positive
+
+
+log10_treatment_plots$treatment
+log10_treatment_plots$negative  
+log10_treatment_plots$positive
+```
+
+Most frequent bees across sites
+```{r}
+
+bee_captures_8th <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv") %>%
+  filter(Replicate >= 1 & Replicate <= 8)
+
+# Removing empty rows and handle missing values... csv stuff is hard!
+bee_captures_8th_clean <- bee_captures_8th %>%
+  filter(!is.na(Plant_ID) & Plant_ID != "" & !is.na(Site) & Site != "")
+
+# Make taxonomic_id variable
+bee_captures_8th_clean <- bee_captures_8th_clean %>%
+  mutate(
+    taxonomic_id = paste(Family, Genus, Species, sep = " ") %>%
+      trimws()  # Remove extra whitespace
+  )
+
+# Make species_name variable
+bee_captures_8th_clean <- bee_captures_8th_clean %>%
+  mutate(
+    genus_initial = ifelse(!is.na(Genus) & Genus != "", 
+                          paste0(substr(Genus, 1, 1), "."), 
+                          ""),
+    species_name = ifelse(!is.na(Species) & Species != "",
+                         paste(genus_initial, Species),
+                         genus_initial)
+  ) %>%
+  select(-genus_initial)
+
+# Middle letter categories for the sites
+bee_captures_8th_clean <- bee_captures_8th_clean %>%
+  mutate(
+    site_category = case_when(
+      grepl("N", Site) ~ "N_sites",
+      grepl("T", Site) ~ "T_sites", 
+      grepl("P", Site) ~ "P_sites",
+      TRUE ~ "Other"
+    )
+  )
+
+
+head(bee_captures_8th_clean %>% select(Family, Genus, Species, taxonomic_id, species_name, Site, site_category))
+```
+
+Sorting out genus of bees into the site categories
+```{r}
+# For negative controls
+genus_n_sites <- bee_captures_8th_clean %>%
+  filter(site_category == "N_sites") %>%
+  count(Genus, name = "count") %>%
+  filter(!is.na(Genus) & Genus != "")
+
+ggplot(genus_n_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() + # This applies viridis to each genus
+  coord_flip() +
+  labs(title = "Genus Distribution in N Sites (GN1, DN2, etc.)",
+       x = "Genus", y = "Count") +
+  theme_minimal() +
+  theme(legend.position = "none") # Remove legend since x-axis shows genus names
+
+# For treatments
+genus_t_sites <- bee_captures_8th_clean %>%
+  filter(site_category == "T_sites") %>%
+  count(Genus, name = "count") %>%
+  filter(!is.na(Genus) & Genus != "")
+
+ggplot(genus_t_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +
+  coord_flip() +
+  labs(title = "Genus Distribution in T Sites (WT3, GT2, etc.)",
+       x = "Genus", y = "Count") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# For postive controls
+genus_p_sites <- bee_captures_8th_clean %>%
+  filter(site_category == "P_sites") %>%
+  count(Genus, name = "count") %>%
+  filter(!is.na(Genus) & Genus != "")
+
+ggplot(genus_p_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +
+  coord_flip() +
+  labs(title = "Genus Distribution in P Sites (DP3, GP2, etc.)",
+       x = "Genus", y = "Count") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+Log-transformed, just adding in scale_y_log10()
+```{r}
+# For negative controls
+genus_n_sites <- bee_captures_8th_clean %>%
+  filter(site_category == "N_sites") %>%
+  count(Genus, name = "count") %>%
+  filter(!is.na(Genus) & Genus != "")
+
+ggplot(genus_n_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +
+  scale_y_log10() +  # Add log transformation to y-axis
+  coord_flip() +
+  labs(title = "Genus Distribution in N Sites (Log 10)",
+       x = "Genus", y = "Count (Log 10)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# For treatments
+genus_t_sites <- bee_captures_8th_clean %>%
+  filter(site_category == "T_sites") %>%
+  count(Genus, name = "count") %>%
+  filter(!is.na(Genus) & Genus != "")
+
+ggplot(genus_t_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +
+  scale_y_log10() +  # Add log transformation to y-axis
+  coord_flip() +
+  labs(title = "Genus Distribution in T Sites (Log 10)",
+       x = "Genus", y = "Count (Log 10)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# For positive controls
+genus_p_sites <- bee_captures_8th_clean %>%
+  filter(site_category == "P_sites") %>%
+  count(Genus, name = "count") %>%
+  filter(!is.na(Genus) & Genus != "")
+
+ggplot(genus_p_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +
+  scale_y_log10() +  # Add log transformation to y-axis
+  coord_flip() +
+  labs(title = "Genus Distribution in P Sites (Log 10)",
+       x = "Genus", y = "Count (Log 10)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+Bee abundance vs flower abundance (this one is messy, but that's messy on
+purpose to show that we still need to work on a better way of determining flower
+availability to bees per species... or just scrapping it alltogether womp womp)
+```{r}
+
+data <- read.csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data_widthless.csv")
+
+
+# Remove rows with NA in key variables (Site, bee_abundance, total_flowers, Site_Type)
+data_filtered <- data %>%
+  filter(Site_Type %in% c("Treatment", "Negative", "Positive")) %>%
+  filter(!is.na(bee_abundance) & !is.na(total_flowers) & !is.na(Site_Type))
+
+
+data_filtered$Site_Type <- factor(data_filtered$Site_Type)
+data_filtered$Site <- factor(data_filtered$Site)
+
+
+# glmm stuffs!
+
+model_glmmtmb <- glmmTMB(
+  bee_abundance ~ total_flowers * Site_Type + (1 | Site),
+  data = data_filtered,
+  family = nbinom1(link = "log")
+)
+
+
+
+# Review Model Results
+summary(model_glmmtmb)
+
+
+# Filter and clean data for analysis and plotting
+analysis_data <- data %>%
+  filter(Site_Type %in% c("Treatment", "Negative", "Positive")) %>%
+  mutate(
+    # Ensure Site_Type is a factor and define the order for consistent plotting/modeling
+    Site_Type = factor(Site_Type, levels = c("Positive", "Negative", "Treatment")),
+    # Ensure variables are numeric
+    total_flowers = as.numeric(total_flowers),
+    bee_abundance = as.numeric(bee_abundance),
+    # Ensure Site is a factor for random effects
+    Site = factor(Site)
+  ) %>%
+  # Remove rows where key variables are NA... shouldn't be as important since
+  # the main NA stuff is a lot of bee species but eh
+  filter(!is.na(total_flowers) & !is.na(bee_abundance) & !is.na(Site))
+
+# Colourblind friendlies :)
+custom_colors <- c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C")
+base_theme <- theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.x = element_text(size = 11, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold"),
+    legend.title = element_text(face = "bold")
+  )
+```
+
+Figure making
+```{r}
+p1_full_data <- ggplot(analysis_data, aes(x = total_flowers, y = bee_abundance, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 3) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+  labs(
+    title = "Bee Abundance vs Flower Abundance (Full Data)",
+    subtitle = "Linear relationship shown by Site Type",
+    x = "Total Flowers (Count)", 
+    y = "Bee Abundance (Count)",
+    color = "Site Type"
+  ) +
+  scale_color_manual(values = custom_colors) +
+  base_theme
+
+print(p1_full_data)
+
+
+
+# Filtering out the highest flower abundance outlier (>7000) for visual clarity
+p2_no_outlier <- ggplot(subset(analysis_data, total_flowers < 7000), 
+                      aes(x = total_flowers, y = bee_abundance, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 3) +
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+  labs(
+    title = "Bee Abundance vs Flower Abundance (Outlier Removed)",
+    subtitle = "Focus on data where Total Flowers < 7000",
+    x = "Total Flowers (Count)", 
+    y = "Bee Abundance (Count)",
+    color = "Site Type"
+  ) +
+  scale_color_manual(values = custom_colors) +
+  base_theme
+
+print(p2_no_outlier)
+```
+
+
+Bee genus vs flower species richness, both log10 transformed
+```{r}
+# Grr
+data <- read.csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data_widthless.csv")
+
+analysis_data <- data %>%
+  filter(Site_Type %in% c("Treatment", "Negative", "Positive")) %>%
+  mutate(
+    # Ensure Site_Type is a factor
+    Site_Type = factor(Site_Type, levels = c("Positive", "Negative", "Treatment")),
+    # Ensure variables are numeric
+    flower_richness = as.numeric(flower_richness), 
+    bee_richness = as.numeric(bee_richness), # New response variable
+    # Ensure Site is a factor for random effects
+    Site = factor(Site)
+  ) %>%
+  # Remove rows where key variables are NA
+  filter(!is.na(flower_richness) & !is.na(bee_richness) & !is.na(Site))
+
+# Colourblind friendlee
+custom_colors <- c("Positive" = "#265380", "Negative" = "#E3DE2D", "Treatment" = "#76BD5C")
+base_theme <- theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.x = element_text(size = 11, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold"),
+    legend.title = element_text(face = "bold")
+  )
+
+
+model_glmmtmb_richness <- glmmTMB(
+  bee_richness ~ log(flower_richness + 1) * Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# Review Model Results
+summary(model_glmmtmb_richness)
+```
+
+The actual figure producing
+```{r}
+p_richness_log <- ggplot(analysis_data, aes(x = flower_richness + 1, y = bee_richness + 1, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 3) +
+  # Using 'lm' on log(x) better approximates the log-linear fit of the GLMM
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+  labs(
+    title = "Bee Genus Richness vs Flower Species Richness (Log-Log)",
+    subtitle = "Both axes are log10-transformed (+1)",
+    x = expression("Flower Species Richness + 1" ~ (log[10] ~ scale)), 
+    y = expression("Bee Genus Richness + 1" ~ (log[10] ~ scale)), 
+    color = "Site Type"
+  ) +
+  scale_x_log10(labels = scales::comma) + 
+  scale_y_log10(labels = scales::comma) + # Log transform the Y-axis
+  scale_color_manual(values = custom_colors) +
+  base_theme
+
+print(p_richness_log)
+#
+```
+
+Bee abundance vs traffic figure
+```{r}
+# Grr
+data <- read.csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data_widthless.csv")
+
+# Filter and clean data for analysis and plotting
+analysis_data <- data %>%
+  # Filter only Treatment and Negative sites
+  filter(Site_Type %in% c("Treatment", "Negative")) %>%
+  mutate(
+    # Ensure Site_Type is a factor
+    Site_Type = factor(Site_Type, levels = c("Negative", "Treatment")),
+    # New predictor (using total_traffic as the aggregated traffic metric)
+    traffic_metric = as.numeric(mean_traffic), 
+    bee_abundance = as.numeric(bee_abundance), 
+    # Ensure Site is a factor for random effects
+    Site = factor(Site)
+  ) %>%
+  # Remove rows where key variables are NA
+  filter(!is.na(traffic_metric) & !is.na(bee_abundance) & !is.na(Site))
+
+custom_colors <- c("Negative" = "#E3DE2D", "Treatment" = "#76BD5C")
+base_theme <- theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.x = element_text(size = 11, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold"),
+    legend.title = element_text(face = "bold")
+  )
+
+
+model_glmmtmb_traffic <- glmmTMB(
+  bee_abundance ~ log(traffic_metric + 1) * Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# Review Model Results
+summary(model_glmmtmb_traffic)
+```
+
+Figure creation again
+```{r}
+p_traffic_log_log <- ggplot(analysis_data, aes(x = traffic_metric + 1, y = bee_abundance + 1, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 3) +
+  # Using 'lm' on log(x) and log(y)
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+  labs(
+    title = "Bee Abundance vs Roadside Traffic (Log-Log Scale)",
+    subtitle = "Both axes are log10-transformed (+1)",
+    x = expression("Traffic Metric + 1" ~ (log[10] ~ scale)), 
+    y = expression("Bee Abundance + 1" ~ (log[10] ~ scale)), 
+    color = "Site Type"
+  ) +
+  scale_x_log10(labels = scales::comma) + 
+  scale_y_log10(labels = scales::comma) + 
+  scale_color_manual(values = custom_colors) +
+  base_theme
+
+print(p_traffic_log_log)
+#
+```
+
+Flower richness vs traffic
+```{r}
+data <- read.csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data_widthless.csv")
+
+# Filter and clean data for analysis and plotting
+analysis_data <- data %>%
+  # Filter only Treatment and Negative sites
+  filter(Site_Type %in% c("Treatment", "Negative")) %>%
+  mutate(
+    # Ensure Site_Type is a factor
+    Site_Type = factor(Site_Type, levels = c("Negative", "Treatment")),
+    # New predictor (using total_traffic as the aggregated traffic metric)
+    traffic_metric = as.numeric(mean_traffic), 
+    flower_richness = as.numeric(flower_richness), # New response variable
+    # Ensure Site is a factor for random effects
+    Site = factor(Site)
+  ) %>%
+  # Remove rows where key variables are NA
+  filter(!is.na(traffic_metric) & !is.na(flower_richness) & !is.na(Site))
+
+
+custom_colors <- c("Negative" = "#E3DE2D", "Treatment" = "#76BD5C")
+base_theme <- theme_minimal() +
+  theme(
+    plot.title = element_text(size = 16, face = "bold"),
+    axis.title.x = element_text(size = 11, face = "bold"),
+    axis.title.y = element_text(size = 11, face = "bold"),
+    legend.title = element_text(face = "bold")
+  )
+
+model_glmmtmb_traffic <- glmmTMB(
+  flower_richness ~ log(traffic_metric + 1) * Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# Review Model Results
+summary(model_glmmtmb_traffic)
+
+```
+
+Figure making
+```{r}
+p_traffic_log_log <- ggplot(analysis_data, aes(x = traffic_metric + 1, y = flower_richness + 1, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 3) +
+  # Using 'lm' on log(x) and log(y)
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+  labs(
+    title = "Flower Richness vs Roadside Traffic (Log-Log Scale)",
+    subtitle = "Both axes are log10-transformed (+1)",
+    x = expression("Traffic Metric + 1" ~ (log[10] ~ scale)), 
+    y = expression("Flower Richness + 1" ~ (log[10] ~ scale)), 
+    color = "Site Type"
+  ) +
+  scale_x_log10(labels = scales::comma) + 
+  scale_y_log10(labels = scales::comma) + 
+  scale_color_manual(values = custom_colors) +
+  base_theme
+
+print(p_traffic_log_log)
+#
+```
