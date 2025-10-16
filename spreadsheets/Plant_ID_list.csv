@@ -85,7 +85,7 @@ ID,Genus,Species
 108,Rubus,odoratus
 109,Rosa,multiflora
 110,Hesperis,matronalis
-111,Penstemon,Digitalis
+111,Penstemon,digitalis
 112,Coreopsis,lanceolata
 113,Asclepias,tuberosa
 114,Asclepias,incarnata
@@ -108,7 +108,7 @@ ID,Genus,Species
 131,Asclepias,"""Purple towers"""
 132,Achillea,"millefolium ""strawberry seduction"""
 133,Sonchus,arvensis
-134,Daucus,Carota
+134,Daucus,carota
 135,Eutrochium,maculatum
 136,Asclepias,incarnata
 137,,

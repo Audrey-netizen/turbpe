@@ -664,7 +664,7 @@ cat("\nSummary statistics:\n")
 summary(sem_data %>% select(-Site, -Site_Type))
 
 # The below is a good use for the one time
-#write_csv(sem_data, "sem_prepared_data.csv")
+# write_csv(sem_data, "sem_prepared_data.csv")
 
 cat("\nData preparation complete! File saved as 'sem_prepared_data.csv'\n")
 ```
@@ -732,8 +732,8 @@ site_comparison <- sem_data_clean %>%
 print(site_comparison)
 
 # Save results
-#write_csv(param_table, "sem_path_coefficients.csv")
-#write_csv(site_comparison, "site_type_comparison.csv")
+# write_csv(param_table, "sem_path_coefficients.csv")
+# write_csv(site_comparison, "site_type_comparison.csv")
 
 cat("\nDing dong make the figure now\n")
 ```
