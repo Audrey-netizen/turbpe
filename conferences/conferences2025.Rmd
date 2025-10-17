@@ -197,15 +197,7 @@ ggplot(genus_summary_log, aes(x = reorder(Genus, -Count), y = LogCount, fill = G
   scale_y_continuous(expand = expansion(mult = c(0, 0.1)))
 ```
 
-Baseline for organizing plant data
-```{r}
-
-flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
-plant_IDs <- read_csv("~/Documents/repos/turbpe/spreadsheets/Plant_ID_list.csv")
-# I believe this is functionally useless, so may be removed later, but for now I
-# think it helps remind readers which datasets we are working with coming up
-```
-
+Looking at flower diversity now
 ```{r}
 # Removing potential duplicates...this is such a flop. I shouldn't have any as
 # of now in this RMD document but this is probably a good thing to do when
@@ -239,7 +231,7 @@ plant_IDs$Taxonomic_Name <- ifelse(
 flowers_with_taxonomy <- merge(
   flowers,
   plant_IDs[, c("ID", "Taxonomic_Name")],
-  by.x = "Species ID",  
+  by.x = "Species_ID",  
   by.y = "ID",
   all.x = TRUE
 )
@@ -405,13 +397,25 @@ log_positive_plot <- create_treatment_plot_log(
   "Positive Control"
 )
 
+log_negative_plot <- create_treatment_plot_log(
+  top_species_by_treatment %>% filter(Treatment_Type == "Negative Control"),
+  "Negative Control"
+)
+
 log_treatment_plot
 log_positive_plot
+log_negative_plot
 ```
+
 
 Trying to get something out of these log distributions... I was taught
 permanova across like 3 different ecology classes and in Eryn's biostats course
 so it must be useful for something, right?
+Unfortunately, this started turning into a downward spiral of trying to figure
+out precisely how to do comparisons between diversity measurements of my sites
+and uh, it is out the current scope of priorities
+I definitely don't have the time to talk about all of this at ESO either... so
+left aside for now, this is very questionable code
 ```{r}
 #I'm going to be honest I still kinda have no idea how this matrix stuff works
 # TwT, or maybe I do conceptually but whenever I try to think about it more it
@@ -472,6 +476,7 @@ print(permanova_neg_treat)
 ```
 
 PCoA for previous permanova of plants, positive control and treatment
+This is some doo-doo, I don't quite get what is happening...
 ```{r}
 # Calculate Bray-Curtis distance
 dist_matrix <- vegdist(comm_matrix_sites, method = "bray")
@@ -500,6 +505,7 @@ ggplot(pcoa_scores, aes(x = PCoA1, y = PCoA2, color = Treatment)) +
                        "p =", round(permanova_result$`Pr(>F)`[1], 4))) +
   theme_minimal()
 ```
+
 
 Okay this starts to get pretty scary I won't lie
 Background context, I was basically trying to set up structural equation model/
@@ -539,7 +545,7 @@ flower_summary <- flowers_with_taxonomy %>%
   filter(Replicate >= 1 & Replicate <= 8) %>%
   group_by(Site, Replicate) %>%
   summarise(
-    total_flowers = sum(`# of Flowering Units`, na.rm = TRUE),
+    total_flowers = sum(`No_of_Flowering_Units`, na.rm = TRUE),
     flower_richness = n_distinct(Taxonomic_Name),
     .groups = 'drop'
   )
@@ -654,7 +660,7 @@ bee_diversity_indices <- bee_captures_8th %>%
 flower_diversity_indices <- flowers_with_taxonomy %>%
   filter(Replicate >= 1 & Replicate <= 8) %>%
   group_by(Site, Replicate, Taxonomic_Name) %>%
-  summarise(count = sum(`# of Flowering Units`, na.rm = TRUE), .groups = 'drop') %>%
+  summarise(count = sum(`No_of_Flowering_Units`, na.rm = TRUE), .groups = 'drop') %>%
   group_by(Site, Replicate) %>%
   summarise(
     flower_shannon = ifelse(n() > 1, diversity(count, index = "shannon"), 0),
@@ -807,14 +813,14 @@ plant_IDs$Taxonomic_Name <- ifelse(
 flowers_with_taxonomy <- merge(
   flowers,
   plant_IDs[, c("ID", "Taxonomic_Name")],
-  by.x = "Species ID",  
+  by.x = "Species_ID",  
   by.y = "ID",
   all.x = TRUE
 )
 
 flowers_with_taxonomy$Taxonomic_Name <- ifelse(
   is.na(flowers_with_taxonomy$Taxonomic_Name),
-  as.character(flowers_with_taxonomy$`Species ID`),
+  as.character(flowers_with_taxonomy$`Species_ID`),
   flowers_with_taxonomy$Taxonomic_Name
 )
 ```
@@ -836,7 +842,7 @@ flower_summary <- flowers_with_taxonomy %>%
   filter(Replicate >= 1 & Replicate <= 8) %>%
   group_by(Site, Replicate) %>%
   summarise(
-    total_flowers = sum(`# of Flowering Units`, na.rm = TRUE),
+    total_flowers = sum(`No_of_Flowering_Units`, na.rm = TRUE),
     flower_richness = n_distinct(Taxonomic_Name),
     .groups = 'drop'
   )
@@ -896,7 +902,7 @@ bee_diversity_indices <- bee_captures_8th %>%
 flower_diversity_indices <- flowers_with_taxonomy %>%
   filter(Replicate >= 1 & Replicate <= 8) %>%
   group_by(Site, Replicate, Taxonomic_Name) %>%
-  summarise(count = sum(`# of Flowering Units`, na.rm = TRUE), .groups = 'drop') %>%
+  summarise(count = sum(`No_of_Flowering_Units`, na.rm = TRUE), .groups = 'drop') %>%
   group_by(Site, Replicate) %>%
   summarise(
     flower_shannon = ifelse(n() > 1, diversity(count, index = "shannon"), 0),
@@ -1152,10 +1158,9 @@ p_mean_comparison <- ggplot(analysis_data_mean, aes(x = Site_Type, y = bee_abund
   
   # Set final labels and theme
   labs(
-    title = "Daily Bee Abundance by Site Type",
-    subtitle = "Boxplot shows Median and Quartiles (Tukey's HSD pairwise comparison)",
+    title = "Daily bee captures by site type",
     x = "", 
-    y = "Daily Bee Abundance (Count)"
+    y = "Daily bee abundance (count)"
   ) +
   
   # Ensure plot limits accommodate the significance brackets
@@ -1169,6 +1174,137 @@ p_mean_comparison <- ggplot(analysis_data_mean, aes(x = Site_Type, y = bee_abund
 
 print(p_mean_comparison)
 #
+```
+
+Okay lots of additions and redundant information, but this is basically here to
+make the figure look the way I desire for presentations, the previous boxplot
+had some legibility issues
+```{r}
+# The amount of giving variable names to read_csv coming up here is really 
+# ticking me off, but to be honest right now the priority is to just get the
+# figures out even if everything is sloppy and redundant... the code will look
+# cool one day! Efficiency doesn't really matter for creating figures in R so I
+# will save that for another data
+data_raw <- read_csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data_widthless.csv")
+
+# Filter and clean data for analysis and plotting
+analysis_data_mean <- data_raw %>%
+    # Filter only three site types
+    filter(Site_Type %in% c("Treatment", "Negative", "Positive")) %>%
+    mutate(
+        # Recode the original variable to the desired text labels
+        Site_Type_Label = recode(Site_Type,
+                                 "Negative" = "Mowed roadside",
+                                 "Treatment" = "Wildflower roadside",
+                                 "Positive" = "Wildflower park"),
+        
+        # Wrap the text to 2 lines (split after first word)
+        Site_Type_Wrapped = str_wrap(Site_Type_Label, width = 10),
+
+        # Redefine Site_Type as a factor with the explicit order of the *wrapped* labels
+        Site_Type = factor(Site_Type_Wrapped, levels = c("Mowed\nroadside", 
+                                                         "Wildflower\nroadside", # MIDDLE
+                                                         "Wildflower\npark")) # RIGHT
+        # --- END OF FIX ---
+    ) %>%
+    # Remove rows where key variables are NA or bee abundance is missing
+    filter(!is.na(bee_abundance) & !is.na(Site_Type)) %>%
+    # I don't know why I can't remove thiiiiiis TwT
+    filter(Replicate >= 1 & Replicate <= 8)
+
+# Colourblind friendly ;)
+custom_colors <- c("Mowed\nroadside" = "#E3DE2D",
+                   "Wildflower\nroadside" = "#76BD5C",
+                   "Wildflower\npark" = "#265380")
+base_theme <- theme_minimal() +
+    theme(
+        plot.title = element_text(size = 16, face = "bold"),
+        axis.title.x = element_text(size = 11, face = "bold"),
+        axis.title.y = element_text(size = 11, face = "bold"),
+        legend.position = "none" # Hide legend as color is redundant with X-axis
+    )
+
+
+# One way anova cuz uh the data is just one variable in three categories? KISS
+anova_results <- aov(bee_abundance ~ Site_Type, data = analysis_data_mean)
+print("--- ANOVA Results ---")
+print(summary(anova_results))
+
+# 2. Tukey's HSD post-hoc test and format for plotting (NOT Turkey womp womp)
+# This step automatically respects the new factor level order
+tukey_hsd_results <- analysis_data_mean %>%
+    tukey_hsd(bee_abundance ~ Site_Type) %>%
+    # This is good for showing the *, **, ***
+    add_significance("p.adj")
+
+print("--- Tukey's HSD Pairwise Comparison Results ---")
+print(tukey_hsd_results)
+
+# More variable labeling yaaaayyyy
+tukey_plot_data <- tukey_hsd_results %>%
+    filter(p.adj <= 0.05) %>% # Only keep significant pairs for visualization
+    mutate(
+        # Map the significance symbols to the label column
+        label = p.adj.signif,
+        # Define the comparison groups (ggsignif expects a list of vectors)
+        comparisons = list(c(group1, group2))
+    ) %>%
+    # Ensure the levels match the plot order
+    filter(group1 != group2)
+
+# This makes the graph less ugly
+max_y <- max(analysis_data_mean$bee_abundance, na.rm = TRUE)
+# Determine the height for the significance brackets based on the max Y value
+y_starts <- c(max_y * 1.15, max_y * 1.3, max_y * 1.45)
+
+# this again makes the order of the bars not as bad
+tukey_plot_data <- tukey_plot_data %>%
+    arrange(p.adj) %>%
+    mutate(y.position = y_starts[1:n()]) %>%
+    select(group1, group2, y.position, label)
+
+p_mean_comparison <- ggplot(analysis_data_mean, aes(x = Site_Type, y = bee_abundance, fill = Site_Type)) +
+    
+    geom_boxplot(alpha = 0.7) +
+    
+    # Apply colours (using the correct custom_colors order)
+    scale_fill_manual(values = custom_colors) +
+    
+    # Add significance bars using ggsignif, reading from the prepared tukey_plot_data
+    geom_signif(
+        comparisons = unique(tukey_plot_data %>% select(group1, group2)) %>% purrr::transpose() %>% purrr::map(unlist),
+        map_signif_level = TRUE,
+        test = "t.test",
+        y_position = tukey_plot_data$y.position,
+        annotations = tukey_plot_data$label,
+        tip_length = 0.01
+    ) +
+    
+    # Set final labels and theme
+    labs(
+        title = "Daily bee captures by site type",
+        x = "",
+        y = "Daily bee abundance (count)"
+    ) +
+    
+    # Ensure plot limits accommodate the significance brackets
+    coord_cartesian(ylim = c(0, max(tukey_plot_data$y.position) * 1.1)) +
+    
+    # Apply minimal theme with custom text sizing
+    base_theme +
+    theme(
+        legend.position = "none",
+        # A: Make category text bold and 2x larger
+        axis.text.x = element_text(size = 17, face = "bold"), # 2x larger than default ~11pt
+        # B: Make Y-axis numbers 2x larger
+        axis.text.y = element_text(size = 17),
+        # C: Make Y-axis label 1.5x larger
+        axis.title.y = element_text(size = 12.5, face = "bold"), # 1.5x larger than original 11pt
+        # D: Adjust plot margins to ensure everything fits with larger text
+        plot.margin = margin(1, 1, 1.5, 1.5, "cm")
+    )
+
+print(p_mean_comparison)
 ```
 
 Log 10 transformed of previous info to do with the flower diversity at each
@@ -1297,6 +1433,42 @@ treatment_plots$positive
 log10_treatment_plots$treatment
 log10_treatment_plots$negative  
 log10_treatment_plots$positive
+```
+
+I'm heavily considering deleting this... oh well, not going to be in the
+presentation anyways
+```{r}
+# 1. Calculate Flower Richness (Unique Taxonomic_Name) per Site
+flower_richness_per_site <- flowers_with_taxonomy %>%
+  filter(Treatment_Type %in% c("Treatment", "Negative Control", "Positive Control")) %>%
+  group_by(Site, Treatment_Type) %>%
+  # Richness = total number of distinct taxonomic names found at that site
+  summarise(Richness = n_distinct(Taxonomic_Name), .groups = "drop")
+
+# 2. Run Kruskal-Wallis Test on Flower Richness
+kruskal_flower_richness <- kruskal.test(Richness ~ Treatment_Type, data = flower_richness_per_site)
+
+print("Kruskal-Wallis Test on FLOWER SPECIES RICHNESS")
+print(kruskal_flower_richness)
+
+# 3. Visualize Flower Richness (Box Plot)
+custom_colors_flowers <- c("Treatment" = "#76BD5C", "Negative Control" = "#E3DE2D", "Positive Control" = "#265380")
+
+flower_richness_boxplot <- ggplot(flower_richness_per_site, 
+                                  aes(x = Treatment_Type, y = Richness, fill = Treatment_Type)) +
+  geom_boxplot() +
+  geom_jitter(width = 0.2, alpha = 0.6) +
+  scale_fill_manual(values = custom_colors_flowers) +
+  labs(
+    title = "Flower Species Richness by Site Category",
+    x = "Site Category",
+    y = "Total Unique Flower Species per Site",
+    subtitle = paste("Kruskal-Wallis P-value =", round(kruskal_flower_richness$p.value, 4))
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5))
+
+print(flower_richness_boxplot)
 ```
 
 Most frequent bees across sites
@@ -1442,6 +1614,119 @@ ggplot(genus_p_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
   theme(legend.position = "none")
 ```
 
+Make the figure bigger/more readable
+```{r}
+# For negative controls
+genus_n_sites <- bee_captures_8th_clean %>%
+  filter(site_category == "N_sites") %>%
+  count(Genus, name = "count") %>%
+  filter(!is.na(Genus) & Genus != "")
+
+ggplot(genus_n_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +
+  scale_y_log10() +  # Add log transformation to y-axis
+  coord_flip() +
+  labs(title = "Genus Distribution at mowed roadsides",
+       x = "Genus", y = "Count (Log 10)") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.x = element_text(size = rel(1.5)),  # 1.5x bigger x-label
+    axis.title.y = element_text(size = rel(1.5)),  # 1.5x bigger y-label
+    plot.title = element_text(size = rel(2)),    # 2x bigger title
+    axis.text.y = element_text(size = rel(1.5))  # 1.5 font size up for categories
+  ) +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm")) # Add margin for taller plot
+
+# For treatments
+genus_t_sites <- bee_captures_8th_clean %>%
+  filter(site_category == "T_sites") %>%
+  count(Genus, name = "count") %>%
+  filter(!is.na(Genus) & Genus != "")
+
+ggplot(genus_t_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +
+  scale_y_log10() +  # Add log transformation to y-axis
+  coord_flip() +
+  labs(title = "Genus Distribution at wildflower roadsides",
+       x = "Genus", y = "Count (Log 10)") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.x = element_text(size = rel(1.5)), 
+    axis.title.y = element_text(size = rel(1.5)), 
+    plot.title = element_text(size = rel(1.7)),    
+    axis.text.y = element_text(size = rel(1.2))  
+  ) +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm")) # Add margin for taller plot
+
+# For positive controls
+genus_p_sites <- bee_captures_8th_clean %>%
+  filter(site_category == "P_sites") %>%
+  count(Genus, name = "count") %>%
+  filter(!is.na(Genus) & Genus != "")
+
+ggplot(genus_p_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +
+  scale_y_log10() +  # Add log transformation to y-axis
+  coord_flip() +
+  labs(title = "Genus Distribution at wildflower parks",
+       x = "Genus", y = "Count (Log 10)") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.x = element_text(size = rel(1.5)),  
+    axis.title.y = element_text(size = rel(1.5)),  
+    plot.title = element_text(size = rel(2)),    
+    axis.text.y = element_text(size = rel(1.2))  
+  ) +
+  theme(plot.margin = unit(c(1, 1, 1, 1), "cm")) # Add margin for taller plot
+```
+
+Tried to make some very tall figures, but this was a flop imho
+```{r}
+# For treatments - save with custom dimensions
+treatment_plot <- ggplot(genus_t_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +
+  scale_y_log10() +
+  coord_flip() +
+  labs(title = "Genus Distribution in T Sites (Log 10)",
+       x = "Genus", y = "Count (Log 10)") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.x = element_text(size = rel(1.5)),
+    axis.title.y = element_text(size = rel(1.5)),
+    plot.title = element_text(size = rel(1.7)),
+    axis.text.y = element_text(size = rel(1.2))
+  )
+
+#ggsave("treatment_plot.png", treatment_plot, width = 8, height = 16)
+
+# Similarly for positive controls
+positive_plot <- ggplot(genus_p_sites, aes(x = reorder(Genus, count), y = count, fill = Genus)) +
+  geom_bar(stat = "identity") +
+  scale_fill_viridis_d() +
+  scale_y_log10() +
+  coord_flip() +
+  labs(title = "Genus Distribution in P Sites (Log 10)",
+       x = "Genus", y = "Count (Log 10)") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.x = element_text(size = rel(1.5)),
+    axis.title.y = element_text(size = rel(1.5)),
+    plot.title = element_text(size = rel(2)),
+    axis.text.y = element_text(size = rel(1.2))
+  )
+
+#ggsave("positive_plot.png", positive_plot, width = 8, height = 16)
+```
+
 Bee abundance vs flower abundance (this one is messy, but that's messy on
 purpose to show that we still need to work on a better way of determining flower
 availability to bees per species... or just scrapping it alltogether womp womp)
@@ -1538,6 +1823,87 @@ p2_no_outlier <- ggplot(subset(analysis_data, total_flowers < 7000),
 print(p2_no_outlier)
 ```
 
+Log10 transform both metrics of the above
+```{r}
+p_abundance_log <- ggplot(analysis_data, aes(x = total_flowers + 1, y = bee_abundance + 1, color = Site_Type)) +
+  geom_point(alpha = 0.7, size = 3) +
+  # Using 'lm' on log(x) better approximates the log-linear fit of the GLMM
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+  labs(
+    title = "Bee Abundance vs Flower Abundance (Log-Log)",
+    subtitle = "Both axes are log10-transformed (+1)",
+    x = expression("Total Flowers + 1" ~ (log[10] ~ scale)), 
+    y = expression("Bee Abundance + 1" ~ (log[10] ~ scale)), 
+    color = "Site Type"
+  ) +
+  scale_x_log10(labels = scales::comma) + 
+  scale_y_log10(labels = scales::comma) + # Log transform the Y-axis
+  scale_color_manual(values = custom_colors) +
+  base_theme
+
+print(p_abundance_log)
+```
+
+Testing for significant difference between the site types for these trends
+```{r}
+# Full model with interaction (your current model)
+model_full <- glmmTMB(
+  bee_abundance ~ total_flowers * Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# Reduced model without interaction (common slope)
+model_reduced <- glmmTMB(
+  bee_abundance ~ total_flowers + Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# Likelihood ratio test for interaction
+anova_result <- anova(model_reduced, model_full)
+print(anova_result)
+```
+
+Test for statistical significance (it's not... shocking)
+```{r}
+# Model WITH flower abundance
+model_with_flowers_abund <- glmmTMB(
+  bee_abundance ~ total_flowers + Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# Model WITHOUT flower abundance (null model for comparison)
+model_without_flowers_abund <- glmmTMB(
+  bee_abundance ~ Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# Likelihood ratio test
+flower_abundance_test <- anova(model_without_flowers_abund, model_with_flowers_abund)
+print("Does flower abundance improve the model?")
+print(flower_abundance_test)
+
+# Get the coefficient and significance for flower abundance
+summary_model_abund <- summary(model_with_flowers_abund)
+print("Flower abundance coefficient and significance:")
+flower_coef_abund <- summary_model_abund$coefficients$cond["total_flowers", ]
+print(flower_coef_abund)
+
+# Alternative with log transformation (to match your figure)
+model_log_flowers_abund <- glmmTMB(
+  bee_abundance ~ log(total_flowers + 1) + Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+summary_model_log_abund <- summary(model_log_flowers_abund)
+print("Log(flower abundance) coefficient and significance:")
+flower_coef_log_abund <- summary_model_log_abund$coefficients$cond["log(total_flowers + 1)", ]
+print(flower_coef_log_abund)
+```
 
 Bee genus vs flower species richness, both log10 transformed
 ```{r}
@@ -1599,6 +1965,21 @@ p_richness_log <- ggplot(analysis_data, aes(x = flower_richness + 1, y = bee_ric
 
 print(p_richness_log)
 #
+```
+
+Testing for if this flower species richness significantly effects bee genus
+richness (it is? yippeeee)
+```{r}
+model_best <- glmmTMB(
+  bee_richness ~ log(flower_richness + 1) + Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+summary_model <- summary(model_best)
+print("Flower richness coefficient and significance:")
+print(summary_model$coefficients$cond["log(flower_richness + 1)", ])
+
 ```
 
 Bee abundance vs traffic figure
@@ -1664,6 +2045,60 @@ print(p_traffic_log_log)
 #
 ```
 
+Testing statistical difference again (statistically siggies yippee)
+```{r}
+# Statistical Tests with the correct variable name
+model_full_traffic <- glmmTMB(
+  bee_abundance ~ log(mean_traffic + 1) * Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# Reduced model without interaction
+model_reduced_traffic <- glmmTMB(
+  bee_abundance ~ log(mean_traffic + 1) + Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# Likelihood ratio test for interaction
+anova_traffic <- anova(model_reduced_traffic, model_full_traffic)
+print("Does the bee-traffic relationship differ by Site Type?")
+print(anova_traffic)
+
+# Overall traffic association
+model_without_traffic <- glmmTMB(
+  bee_abundance ~ Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+traffic_association_test <- anova(model_without_traffic, model_reduced_traffic)
+print("Does traffic significantly affect bee abundance?")
+print(traffic_association_test)
+
+summary_traffic <- summary(model_reduced_traffic)
+print("Traffic coefficient and significance:")
+traffic_coef <- summary_traffic$coefficients$cond["log(mean_traffic + 1)", ]
+print(traffic_coef)
+
+# Post-hoc comparisons if interaction is significant
+if(anova_traffic$`Pr(>Chisq)`[2] < 0.05) {
+  library(emmeans)
+  slope_comparisons_traffic <- emtrends(
+    model_full_traffic, 
+    specs = pairwise ~ Site_Type, 
+    var = "log(mean_traffic + 1)"
+  )
+  
+  print("Slope estimates by Site Type:")
+  print(slope_comparisons_traffic$emtrends)
+  
+  print("Pairwise comparisons of slopes:")
+  print(slope_comparisons_traffic$contrasts)
+}
+```
+
 Flower richness vs traffic
 ```{r}
 data <- read.csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data_widthless.csv")
@@ -1726,3 +2161,69 @@ p_traffic_log_log <- ggplot(analysis_data, aes(x = traffic_metric + 1, y = flowe
 print(p_traffic_log_log)
 #
 ```
+
+Last statistical test... for now (it's a liiitle bit)
+I swear this kinda gave small significance before TwT
+```{r}
+model_full_traffic_flowers <- glmmTMB(
+  flower_richness ~ log(mean_traffic + 1) * Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# Reduced model without interaction (common slope)
+model_reduced_traffic_flowers <- glmmTMB(
+  flower_richness ~ log(mean_traffic + 1) + Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# Likelihood ratio test for interaction
+anova_traffic_flowers <- anova(model_reduced_traffic_flowers, model_full_traffic_flowers)
+print("Does the flower richness-traffic relationship differ by Site Type?")
+print(anova_traffic_flowers)
+
+model_without_traffic_flowers <- glmmTMB(
+  flower_richness ~ Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+traffic_association_test_flowers <- anova(model_without_traffic_flowers, model_reduced_traffic_flowers)
+print("Does traffic significantly affect flower richness?")
+print(traffic_association_test_flowers)
+
+# Get coefficient and significance
+summary_traffic_flowers <- summary(model_reduced_traffic_flowers)
+print("Traffic coefficient and significance for flower richness:")
+traffic_coef_flowers <- summary_traffic_flowers$coefficients$cond["log(mean_traffic + 1)", ]
+print(traffic_coef_flowers)
+
+# Post-hoc comparisons if interaction is significant
+interaction_p_value <- anova_traffic_flowers$`Pr(>Chisq)`[2]
+
+if(!is.na(interaction_p_value) && interaction_p_value < 0.05) {
+  library(emmeans)
+  slope_comparisons_traffic_flowers <- emtrends(
+    model_full_traffic_flowers, 
+    specs = pairwise ~ Site_Type, 
+    var = "log(mean_traffic + 1)"
+  )
+  
+  print("Slope estimates by Site Type:")
+  print(slope_comparisons_traffic_flowers$emtrends)
+  
+  print("Pairwise comparisons of slopes:")
+  print(slope_comparisons_traffic_flowers$contrasts)
+} else {
+  if (is.na(interaction_p_value)) {
+    warning("Interaction test p-value is NA. Check model convergence!")
+  } else {
+    print(paste0("Interaction not significant (P = ", round(interaction_p_value, 4), "). Post-hoc comparisons skipped."))
+  }
+}
+```
+
+FYI if anybody was wondering why I left testing the statistical significance of
+these models for so late... I already went through them when trying to work
+through SEM stuff, but just wanted to add it in here for clarity
