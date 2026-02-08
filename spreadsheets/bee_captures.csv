@@ -1,11 +1,11 @@
 Plant_ID,Site,Time,Date,Unique_Field_ID,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
+61,GP1,13:42,27-05-2025,61GP1_13:42_27/5/25,1,Andreninae,Andrena,,,,,
 56,WP1,14:11,03-06-2025,56WP1_14:11_3/6/25,2,Andrenidae,Andrena,,,,,
 44,GT2,14:03,16-06-2025,44GT2_14:03_16/6/25,2,Andrenidae,Andrena,,,,,
 73,DT2,16:35,25-06-2025,73DT2_16:35_25/6/25,3,Andrenidae,Andrena,,,,,
 134,GP2,12:57,07-08-2025,134GP2_12:57_7/8/25,7,Andrenidae,Perdita ,octamculata,,,,
 160,GT2,10:35,27-08-2025,160GT2_10:35_27/8/25,8,Andrenidae,Andrena,,,,,
 160,GP3,11:21,27-08-2025,160GP3_11:21_27/8/25,8,Andrenidae,Andrena,,,,,
-61,GP1,13:42,27-05-2025,61GP1_13:42_27/5/25,1,Andreninae,Andrena,,,,,
 42,DP3,13:04,23-06-2025,42DP3_13:04_23/6/25,3,Apidae,Apis,mellifera,,,,
 137,DP3,13:30,11-07-2025,137DP3_13:30_11/7/25,5,Apidae,Apis,mellifera,,,,
 124,DP2,13:04,18-07-2025,124DP2_13:04_18/7/25,5,Apidae,Ceratina,,,,,
