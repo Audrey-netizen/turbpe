@@ -1028,7 +1028,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 148,WP3,13:08,08-09-2025,9,Halictidae,Agapostemon,,,,,f
 149,WP3,13:32,08-09-2025,9,Halictidae,Agapostemon,,,,,f 
 148,WP3,13:24,08-09-2025,9,Halictidae,Agapostemon,,,,,m 
-145,WP3,13:26,08-09-2025,9,Halictidae,Agapostemon,,,,,m 
+145,WP3,13:26,08-09-2025,9,Halictidae,Agapostemon,,,,1,m 
 185,WP3,13:28,08-09-2025,9,Apidae,Xylocopa,virginica,,,,
 160,WT3,14:50,08-09-2025,9,Apidae,Apis,mellifera,,,,
 28,WT4,16:05,08-09-2025,9,Apidae,Apis,mellifera,,,,
