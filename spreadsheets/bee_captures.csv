@@ -1003,7 +1003,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 135,DP4,13:42,30-08-2025,9,Apidae,Bombus,,,,,
 135,DP4,13:42,30-08-2025,9,Apidae,Bombus,,,,,
 135,DP4,13:44,30-08-2025,9,Apidae,Bombus,,,,,
-135,DP4,13:45,30-08-2025,9,Apidae,Bombus,,,,,
+135,DP4,13:45,30-08-2025,9,Apidae,Bombus,,,,2,m
 135,DP4,13:47,30-08-2025,9,Apidae,Bombus,,,,,
 183,DP2,10:09,30-08-2025,9,Apidae,Apis,mellifera,,,,
 135,DP4,13:45 no1,30-08-2025,9,Apidae,Apis,mellifera,,,,
