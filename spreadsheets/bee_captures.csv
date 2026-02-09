@@ -1058,6 +1058,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 197,GT2,14:25 a,18-09-2025,9,Apidae,Apis,mellifera,,,,
 197,GT2,14:25 b,18-09-2025,9,Apidae,Apis,mellifera,,,,
 197,GT2,14:27,18-09-2025,9,Apidae,Apis,mellifera,,,,
+160,GT2,14:27,18-09-2025,9,Apidae,Melissodes,,,,,m
 197,GT2,14:31,18-09-2025,9,Apidae,Apis,mellifera,,,,
 197,GT2,14:33,18-09-2025,9,Apidae,Apis,mellifera,,,,
 164,WP3,13:26,30-09-2025,10,Halictidae,Augochlorini,,,,,
