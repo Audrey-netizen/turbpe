@@ -897,7 +897,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 134,GP3,11:23,27-08-2025,8,Colletidae,Hylaeus,,,,,
 94,GT3,13:27 2,27-08-2025,8,Colletidae,Hylaeus,,,,,
 94,GT3,13:42,27-08-2025,8,Colletidae,Hylaeus,,,,,
-174,GP3,11:15,27-08-2025,8,Halictidae,Agapostemon,,,,,
+174,GP3,11:15,27-08-25,9,Apidae,Halictidae,Agapostemon,,,,f
 146,GT3,13:45,27-08-2025,8,Halictidae,Agapostemon,,,,,
 28,WT3,10:37,27-08-2025,8,Halictidae,Halictus,ligatus,,,,
 174,GP3,11:13,27-08-2025,8,Megachilidae,Heriades,,,,,
@@ -1047,4 +1047,4 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 197,GT2,14:27,18-09-2025,9,Apidae,Apis,mellifera,,,,
 197,GT2,14:31,18-09-2025,9,Apidae,Apis,mellifera,,,,
 197,GT2,14:33,18-09-2025,9,Apidae,Apis,mellifera,,,,
-174,GP3,11:15,27-08-25,9,Apidae,Halictidae,Agapostemon,,,,f 
+
