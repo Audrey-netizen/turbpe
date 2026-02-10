@@ -1056,6 +1056,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 160,GP3,12:55,18-09-2025,9,Apidae,Bombus,,,,,
 160,GT2,14:41,18-09-2025,9,Apidae,Melissodes,,,,,m
 165,GT2,14:45,18-09-2025,9,Apidae,Bombus,,,,,
+160,GT2,14:47,18-09-2025,9,Apidae,Melissodes,,,,,f 
 160,GP3,13:00,18-09-2025,9,Apidae,Bombus,,,,,
 160,GP3,12:46,18-09-2025,9,Apidae,Bombus,,,,,
 160,GP3,12:55,18-09-2025,9,Apidae,Bombus,,,,,
@@ -1084,4 +1085,3 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 28,WT3,14:23,30-09-2025,10,Apidae,Bombus,,,,,f
 202,GT1,12:17,14-10-2025,10,Halictidae,Agapostemon,,,,,f
 197,DP2,11:47,06-10-2025,10,Apidae,Bombus,,,,,f
-
