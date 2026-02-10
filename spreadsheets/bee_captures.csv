@@ -1026,6 +1026,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 51,DT3,16:22,03-09-2025,9,Apidae,Apis,mellifera,,,,
 48,DT3,16:22,03-09-2025,9,Halictidae,Agapostemon,,,,,m 
 148,Wp3,13:10,08-09-2025,9,Apidae,Melissodes,,,,,m
+184,WP3,13:10,08-09-2025,9,Apidae,Melissodes,,,,,f 
 148,WP3,13:12,08-09-2025,9,Apidae,Melissodes,,,,,m
 148,WP3,13:16,08-09-2025,9,Apidae,Melissodes,,,,,f 
 145,WP3,13:19,08-09-2025,9,Apidae,Bombus,,,,,
@@ -1040,6 +1041,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 149,WP3,13:32,08-09-2025,9,Halictidae,Agapostemon,,,,,f 
 147,WP3,13:19,08-09-2025,9,Apidae,Melissodes,,,,,m
 148,WP3,13:24,08-09-2025,9,Halictidae,Agapostemon,,,,,m 
+148,WP3,13:25,08-09-2025,9,Apidae,Melissodes,,,,,f 
 145,WP3,13:26,08-09-2025,9,Halictidae,Agapostemon,,,,1,m 
 135,DP4,14:27,08-09-2025,9,Apidae,Melissodes,,,,2,f
 185,WP3,13:28,08-09-2025,9,Apidae,Xylocopa,virginica,,,,
