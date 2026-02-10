@@ -884,9 +884,9 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 174,GP3,11:30,27-08-2025,8,Apidae,Ceratina,,,,,
 174,GP3,11:32,27-08-2025,8,Apidae,Ceratina,,,,,
 160,GT2,10:33,27-08-2025,8,Apidae,Melissodes,,,,,
-174,GP3,11:16 1,27-08-2025,8,Apidae,Melissodes,,,,,
+174,GP3,11:16,27-08-2025,8,Apidae,Melissodes,,,,1,
 174,GP3,11:22,27-08-2025,8,Apidae,Melissodes,,,,,m
-174,GP3,11:33 1,27-08-2025,8,Apidae,Melissodes,,,,,
+174,GP3,11:33,27-08-2025,8,Apidae,Melissodes,,,,1,m
 174,GP3,11:33 b*,27-08-2025,8,Apidae,Melissodes,,,,,
 174,GP3,11:34,27-08-2025,8,Apidae,Melissodes,,,,,m 
 160,GT2,10:12,27-08-2025,8,Apidae,Melissodes,,,,,m 
