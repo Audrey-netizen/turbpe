@@ -1063,6 +1063,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 28,GP3,12:41,18-09-2025,9,Apidae,Melissodes,,,,,f
 160,GP3,12:43,18-09-2025,9,Apidae,Bombus,,,,,
 160,WT3,14:38,18-09-2025,9,Apidae,Bombus,,,,,
+197,GT2,14:20,18-09-2025,9,Apidae,Melissodes,,,,,f 
 160,GT2,14:21,18-09-2025,9,Apidae,Melissodes,,,,,m
 197,GT2,14:22,18-09-2025,9,Apidae,Bombus,,,,,
 160,GT2,14:38,18-09-2025,9,Apidae,Bombus,,,,,
