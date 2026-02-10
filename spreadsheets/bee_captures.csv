@@ -1054,6 +1054,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 28,WT4,16:05,08-09-2025,9,Apidae,Apis,mellifera,,,,
 160,GT1,12:54,15-09-2025,9,Apidae,Bombus,,,,,
 160,GT1,12:55,15-09-2025,9,Apidae,Bombus,,,,,
+160,GT1,12:58,15-09-2025,9,Halictidae,Agapostemon,,,,2,f 
 160,GT1,12:45,15-09-2025,9,Apidae,Bombus,,,,,
 160,GT1,12:41,15-09-2025,9,Apidae,Bombus,,,,,
 160,GT1,13:01,15-09-2025,9,Apidae,Melissodes,,,,,f
@@ -1069,6 +1070,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 160,GP3,12:46,18-09-2025,9,Apidae,Bombus,,,,,
 160,GP3,12:47,18-09-2025,9,Halictidae,Agapostemon,,,,,f 
 160,GP3,12:55,18-09-2025,9,Apidae,Bombus,,,,,
+147,GP3,12:40,18-09-2025,9,Halictidae,Agapostemon,,,,,f 
 28,GP3,12:41,18-09-2025,9,Apidae,Bombus,,,,,
 28,GP3,12:41,18-09-2025,9,Apidae,Melissodes,,,,,f
 160,GP3,12:43,18-09-2025,9,Apidae,Bombus,,,,,
