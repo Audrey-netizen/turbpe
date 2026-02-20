@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-Site,Time,Date,Traffic passenger,Traffic Bike,Traffic truck,Temp,Humidity,Wind,Volume,# Observers,# Bee observers,Researcher names, Counter's name, Plant Species floral units count, 
+Site,Time,Date,Traffic passenger,Traffic Bike,Traffic truck,Temp,Humidity,Wind,Volume,# Observers,# Bee observers,Researcher names, Counter's name, Plant Species floral units count 
 DP1,13:50:00,15/05/25,,,,17,71.4,1.6,,2,2,"AK, AS",,
 DP1,14:00:00,15/05/25,,,,19.4,73.5,1.7,,2,2,"AK, AS",,
 DP1,14:10:00,15/05/25,,,,17.8,72,1.5,,2,2,"AK, AS",,
@@ -1704,3 +1703,4 @@ GT1 mean,15:03-15:33,27-08-2025,,,,,,,,2,1,"AK, KT",KT
 GT1 total,15:03-15:33,27-08-2025,15,2,0,,,,,2,1,"AK, KT",KT
 
 >>>>>>> 68f0d567a6ed011e943c61c22e8eaad7bb6eea73
+
