@@ -1,5 +1,4 @@
 Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
-134,GP2,14:05,2025-07-24,6,Halictidae,Halictus,rubucundis,,,,
 30,DP1,14:05,2025-05-15,1,Halictidae,Augochlorella,,,,,
 22,DP1,13:50,2025-05-15,1,Halictidae,Lasioglossum,,,,,
 30,DP1,14:04,2025-05-15,1,Halictidae,Augochlorella,,,,,
@@ -491,6 +490,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 134,GP2,13:50 2,2025-07-24,6,Colletidae,Hylaeus,,,,,
 134,GP2,13:53,2025-07-24,6,Colletidae,Hylaeus,,,,,
 134,GP2,14:01,2025-07-24,6,Colletidae,Hylaeus,,,,,
+134,GP2,14:05,2025-07-24,6,Halictidae,Halictus,rubucundis,,,,
 134,GT1,11:25,2025-07-24,6,Halictidae,Lasioglossum,,,,,
 134,GT1,11:12,2025-07-24,6,Halictidae,Lasioglossum,,,,,
 55,GN1,10:47,2025-07-24,6,Halictidae,Lasioglossum,,,,,
