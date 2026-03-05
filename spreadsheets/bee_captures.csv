@@ -262,7 +262,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 5,WP1,11:10,2025-07-11,5,Apidae,Bombus,mixtus,,,,
 42,WP1,13:35,2025-07-11,5,Apidae,Apis,mellifera,,,,
 42,WP1,13:41,2025-07-11,5,Apidae,Apis,mellifera,,,,
-42,DP3,13:17,2025-07-11,5,Megachilidae,Megachile,,,,2,
+42,DP3,13:17,2025-07-11,5,Megachilidae,Megachile,,,,,
 130,WP1,13:19,2025-07-11,5,Apidae,Bombus,,,,,
 130,WP1,13:23,2025-07-11,5,Apidae,Bombus,,,,,
 130,DP3,13:38,2025-07-11,5,Apidae,Bombus,affinis,,,,
