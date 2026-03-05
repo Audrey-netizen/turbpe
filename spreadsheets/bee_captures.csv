@@ -202,7 +202,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 42,GT1,10:15,2025-07-07,4,Apidae,Bombus,griseocollis,,,,
 42,GT1,10:19,2025-07-07,4,Apidae,Bombus,griseocollis,,,,
 42,GT1,10:20,2025-07-07,4,Apidae,Bombus,griseocollis,,,,
-42,GT3,12:56,2025-07-16,5,Megachilidae,Megachile,,,,2,
+42,GT3,12:56,2025-07-16,5,Megachilidae,Megachile,,,,,
 112,GT3,13:34,2025-07-08,4,Apidae,Melissodes,,,,,
 115,GT3,13:34,2025-07-08,4,Apidae,Triepeolus,,,,,
 116,GT3,13:35,2025-07-08,4,Apidae,Melissodes,,,,,
