@@ -312,10 +312,12 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 115,GT3,13:09,2025-07-16,5,Apidae,Bombus,griseocollis,,,,
 114,GT3,13:09,2025-07-16,5,Apidae,Bombus,griseocollis,,,,
 42,GT3,13:10,2025-07-16,5,Apidae,Apis,mellifera,,,,
+42,GT3,13:14,16-07-2025,5,Megachilidae ,Megachile ,,,,,
 115,GT3,13:23,2025-07-16,5,Apidae,Melissodes,,,,,
 42,GT3,13:22,2025-07-16,5,Apidae,Apis,mellifera,,,,
 134,GT1,11:16,2025-07-16,5,Colletidae,Hylaeus,,,,,
 115,GT3,13:06,2025-07-16,5,Colletidae,Hylaeus,,,,,
+114,GT3,13:24,16-07-2025,5,Megachilidae ,Megachile ,,,,,
 42,GT3,13:25,2025-07-16,5,Halictidae,Augochlorella ,,,,,
 5,GT1,11:20,2025-07-16,5,Halictidae,Agapostemon,virescens,,,,
 115,GT3,13:24,2025-07-16,5,Halictidae,Halictus,ligatus,,,,
@@ -412,6 +414,8 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 134,DT2,12:08,2025-07-22,6,Halictidae,Lasioglossum,,,,,
 134,DT2,12:12,2025-07-22,6,Halictidae,Halictus,rubucundis,,,,
 122,DT2,12:18,2025-07-22,6,Apidae,Bombus,,,,,
+?,DT2,12:25,22-07-2025,6,Halictidae ,Augochlorella ,,,,,
+?,DT2,12:31,22-07-2025,6,Halictidae ,Augochlorella ,,,,,
 124,DP2,13:28,2025-07-22,6,Apidae,Bombus,,,,,
 124,DP2,13:28,2025-07-22,6,Apidae,Bombus,,,,,
 124,DP2,13:30,2025-07-22,6,Apidae,Bombus,,,,,
@@ -721,10 +725,6 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 175,WT3,15:52,18-08-2025,7,Halictidae,Lasioglossum,,,,2,
 175,WT3,15:52,18-08-2025,7,Halictidae,Lasioglossum,,,,1,
 175,WT3,16:08,18-08-2025,7,Halictidae,Lasioglossum,,,,,
-28,WT3,10:40 2,18-08-2025,8,Halictidae,Lasioglossum,,,,2,
-183,DP2,10:17,18-08-2025,9,Halictidae,Agapostemon,,,,,
-?,DT2,12:31,18-08-2025,6,Halictidae ,Augochlorella ,,,,,
-?,DT2,12:25,18-08-2025,6,Halictidae ,Augochlorella ,,,,,
 174,WP3,14:53 a,18-08-2025,7,Halictidae,Halictus,confusus,,,,
 174,WP3,15:16 b,18-08-2025,7,Halictidae,Halictus,confusus,,,,
 174,WP3,14:51 b,18-08-2025,7,Halictidae,Halictus,confusus,,,,
@@ -816,6 +816,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 28,WT3,10:27,22-08-2025,8,Apidae,Ceratina,,,,,
 28,WT3,10:56,22-08-2025,8,Apidae,Melissodes,,,,,
 176,WP3,9:49,22-08-2025,8,Colletidae,Hylaeus,,,,,
+28,WT3,10:40 2,22-08-2025,8,Halictidae,Lasioglossum,,,,2,
 28,WT3,10:42,22-08-2025,8,Colletidae,Hylaeus,,,,,
 28,WT3,10:29,22-08-2025,8,Colletidae,Hylaeus,,,,,
 28,WT3,10:31 2,22-08-2025,8,Colletidae,Hylaeus,,,,,
@@ -903,9 +904,6 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 174,GP3,11:13,27-08-2025,8,Megachilidae,Heriades,,,,,
 174,GP3,11:14 1,27-08-2025,8,Megachilidae,Hariades,,,,,
 174,GP3,11:16 2,27-08-2025,8,Megachilidae,Hariades,,,,,
-42,GT3,13:14,27-08-2025,5,Megachilidae ,Megachile ,,,,,
-148,WP3,13:16,27-08-2025,9,Apidae,Melissodes,,,,,m
-114,GT3,13:24,27-08-2025,5,Megachilidae ,Megachile ,,,,,
 165,GT2,10:14,27-08-2025,8,Apidae,Apis,mellifera,,,,
 94,GT3,13:18,27-08-2025,8,Apidae,Apis,mellifera,,,,
 94,GT3,13:22,27-08-2025,8,Apidae,Apis,mellifera,,,,
@@ -946,6 +944,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 183,DP2,10:05,30-08-2025,9,Halictidae,Halictus,ligatus,,,,
 183,DP2,10:11,30-08-2025,9,Halictidae,Halictus,ligatus,,,2,
 183,DP2,10:14,30-08-2025,10,Apidae,Melissodes,,,,,m
+183,DP2,10:17,30-08-2025,9,Halictidae,Agapostemon,,,,,
 183,DP2,10:18,30-08-2025,9,Halictidae,Halictus,ligatus,,,,
 183,DP2,10:21,30-08-2025,9,Halictidae,Halictus,ligatus,,,,
 183,DP2,10:25,30-08-2025,9,Halictidae,Halictus,ligatus,,,,
@@ -1085,6 +1084,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex
 160,WT3,14:46,08-09-2025,9,Apidae,Bombus,,,,,
 145,WP3,13:08,08-09-2025,9,Apidae,Apis,mellifera,,,,
 148,WP3,13:08,08-09-2025,9,Halictidae,Agapostemon,,,,,f
+148,WP3,13:16,08-09-2025,9,Apidae,Melissodes,,,,,m
 149,WP3,13:32,08-09-2025,9,Halictidae,Agapostemon,,,,,f 
 147,WP3,13:19,08-09-2025,9,Apidae,Melissodes,,,,,m
 148,WP3,13:24,08-09-2025,9,Halictidae,Agapostemon,,,,,m 
