@@ -478,6 +478,7 @@ print(permanova_neg_treat)
 
 PCoA for previous permanova of plants, positive control and treatment
 This is some doo-doo, I don't quite get what is happening...
+Actually I was just statistically illeterate before, this is quite good yes?
 ```{r}
 # Calculate Bray-Curtis distance
 dist_matrix <- vegdist(comm_matrix_sites, method = "bray")
