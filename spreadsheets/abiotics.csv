@@ -1,4 +1,4 @@
-Site,Time,Date,Traffic passenger,Traffic Bike,Traffic truck,Temp,Humidity,Wind,Volume,# Observers,# Bee observers,Researcher names, Counter's name, Plant Species floral units count,
+Site,Time,Date,Traffic_passenger,Traffic_bike,Traffic_truck,Temp,Humidity,Wind,Volume,# Observers,# Bee observers,Researcher names, Counter's name, Plant Species floral units count,
 DP1,13:50:00,25/05/15,,,,17,71.4,1.6,,2,2,AK_AS,,,
 DP1,14:00:00,25/05/15,,,,19.4,73.5,1.7,,2,2,AK_AS,,,
 DP1,14:10:00,25/05/15,,,,17.8,72,1.5,,2,2,AK_AS,,,
