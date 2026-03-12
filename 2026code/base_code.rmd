@@ -695,6 +695,10 @@ sem_data <- bee_summary %>%
 ```
 
 Load up the piece of data we just made
+New note: what the hell is this? How did I go about making a csv file that's
+"friendly for SEM analysis" but it clearly has to have been made with some sort
+of programming to put together? There should be some code previously for this, I
+assume that was in a previous document. Regardless, horrifically sloppy from me.
 ```{r}
 sem_prepared_data <- read_csv("~/Documents/repos/turbpe/spreadsheets/sem_prepared_data.csv")
 
@@ -756,8 +760,8 @@ site_comparison <- sem_data_clean %>%
 print(site_comparison)
 
 # Save results
-# write_csv(param_table, "sem_path_coefficients.csv")
-# write_csv(site_comparison, "site_type_comparison.csv")
+write_csv(param_table, "sem_path_coefficients.csv")
+write_csv(site_comparison, "site_type_comparison.csv")
 
 cat("\nDing dong make the figure now\n")
 ```
@@ -955,7 +959,7 @@ cat("Dimensions:", dim(sem_data_widthless), "\n")
 cat("Variables:", paste(colnames(sem_data_widthless), collapse = ", "), "\n")
 
 # Gotta chill again on creating extra files
-# write_csv(sem_data_widthless, "sem_prepared_data_widthless.csv")
+write_csv(sem_data_widthless, "sem_prepared_data_widthless.csv")
 cat("Dataset saved as 'sem_prepared_data_widthless.csv' yippeee\n")
 ```
 
