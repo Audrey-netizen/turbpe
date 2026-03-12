@@ -575,9 +575,9 @@ abiotic_summary <- abiotics %>%
       Traffic_passenger %in% c("", "NA", "?", "N/A") ~ "0",
       TRUE ~ Traffic_passenger
     ),
-    Traffic_Bike = case_when(
-      Traffic_Bike %in% c("", "NA", "?", "N/A") ~ "0",
-      TRUE ~ Traffic_Bike
+    Traffic_bike = case_when(
+      Traffic_bike %in% c("", "NA", "?", "N/A") ~ "0",
+      TRUE ~ Traffic_bike
     ),
     Traffic_truck = case_when(
       Traffic_truck %in% c("", "NA", "?", "N/A") ~ "0",
@@ -585,7 +585,7 @@ abiotic_summary <- abiotics %>%
     ),
     # Now convert to numeric
     Traffic_passenger = as.numeric(Traffic_passenger),
-    Traffic_Bike = as.numeric(Traffic_Bike),
+    Traffic_bike = as.numeric(Traffic_bike),
     Traffic_truck = as.numeric(Traffic_truck)
   ) %>%
   # Group by clean site and date
@@ -596,7 +596,7 @@ abiotic_summary <- abiotics %>%
     mean_wind = mean(Wind, na.rm = TRUE),
     mean_volume = mean(Volume, na.rm = TRUE),
     total_traffic_passenger = sum(Traffic_passenger, na.rm = TRUE),
-    total_traffic_bike = sum(Traffic_Bike, na.rm = TRUE),
+    total_traffic_bike = sum(Traffic_bike, na.rm = TRUE),
     total_traffic_truck = sum(Traffic_truck, na.rm = TRUE),
     .groups = 'drop'
   ) %>%
@@ -862,7 +862,7 @@ abiotic_summary <- abiotics %>%
   # Convert traffic columns - USE BACKTICKS for problematic column names
   mutate(
     passenger_traffic = as.numeric(`Traffic_passenger`),
-    bike_traffic = as.numeric(`Traffic_Bike`),
+    bike_traffic = as.numeric(`Traffic_bike`),
     truck_traffic = as.numeric(`Traffic_truck`)
   ) %>%
   # Group by clean site and date
