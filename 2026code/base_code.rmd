@@ -508,6 +508,73 @@ ggplot(pcoa_scores, aes(x = PCoA1, y = PCoA2, color = Treatment)) +
   theme_minimal()
 ```
 
+Same figure just grey theming
+Plus making it uh shorter for a poster
+It works but it's very inelegant since it adds a file to the repository, classic
+R
+Actually, I have thought about it more, ggsave function makes me want to [do
+something harmful to myself], I don't know why I wasn't so upset about it before
+I just can't see a way in which this can elegantly be applied in a repository
+```{r}
+# 1. Statistical Calculations
+dist_matrix <- vegdist(comm_matrix_sites, method = "bray")
+pcoa_result <- cmdscale(dist_matrix, eig = TRUE, k = 2)
+
+pcoa_scores <- as.data.frame(pcoa_result$points)
+colnames(pcoa_scores) <- c("PCoA1", "PCoA2")
+pcoa_scores$Treatment <- treatment_groups
+pcoa_scores$Site <- rownames(pcoa_scores)
+
+variance_explained <- round(pcoa_result$eig / sum(pcoa_result$eig) * 100, 1)
+
+# 2. Generate Plot
+p_pcoa <- ggplot(pcoa_scores, aes(x = PCoA1, y = PCoA2, color = Treatment)) +
+  geom_point(size = 3) +
+  stat_ellipse(level = 0.95) +
+  geom_text(aes(label = Site), vjust = 1.5, size = 3) +
+  
+  scale_color_manual(values = c("Treatment" = "#7BB33D", "Positive Control" = "#273C73")) +
+  
+  labs(
+    x = paste("PCoA1 (", variance_explained[1], "%)"),
+    y = paste("PCoA2 (", variance_explained[2], "%)"),
+    title = "PCoA: Treatment vs Positive Control",
+    subtitle = paste("PERMANOVA R² =", round(permanova_result$R2[1], 3),
+                     "p =", round(permanova_result$`Pr(>F)`[1], 4))
+  ) +
+  
+  base_theme + 
+  theme(
+    # Set the background to a hexcode, because apparently grey is different for
+    # different figures what the helli
+    panel.background = element_rect(fill = "#bbbbbbff", colour = NA),
+    plot.background = element_rect(fill = "#bbbbbbff", colour = NA),
+    
+    # Legend styling to match background
+    legend.background = element_rect(fill = "transparent"),
+    legend.key = element_rect(fill = "transparent"), 
+    
+    #title font bigger 22, and centered 
+    plot.title = element_text(hjust = 0.5, size = 22, face = "bold"),
+    
+    # Text sizing
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    axis.text.x = element_text(size = 12),
+    axis.text.y = element_text(size = 12)
+  )
+
+# Display in R session
+print(p_pcoa)
+
+#Export with "Squished" 2/3 Height (7x4.5 inches)
+#ggsave("pcoa_plot_squished.png", 
+#       plot = p_pcoa, 
+#       width = 7, 
+#       height = 4.5, 
+#       units = "in", 
+#       dpi = 300)
+```
 
 Okay this starts to get pretty scary I won't lie
 Background context, I was basically trying to set up structural equation model/
@@ -1195,7 +1262,64 @@ p_mean_comparison <- ggplot(analysis_data_mean, aes(x = Site_Type, y = bee_abund
   )
 
 print(p_mean_comparison)
-#
+```
+
+Same boxplot just changing background colour to fit a poster better, plus making
+titling more visible
+Plus making it uh shorter? Hope this works
+It works but it's very inelegant since it adds a file to the repository, classic
+R
+```{r}
+p_mean_comparison <- ggplot(analysis_data_mean, aes(x = Site_Type, y = bee_abundance, fill = Site_Type)) +
+  geom_boxplot(alpha = 0.7) +
+  
+  # Apply colours
+  scale_fill_manual(values = custom_colors) +
+  
+  # Add significance bars
+  geom_signif(
+    comparisons = unique(tukey_plot_data %>% select(group1, group2)) %>% purrr::transpose() %>% purrr::map(unlist),
+    map_signif_level = TRUE, 
+    test = "t.test", 
+    y_position = tukey_plot_data$y.position,
+    annotations = tukey_plot_data$label,
+    tip_length = 0.01
+  ) +
+  
+  labs(
+    title = "Daily bee captures by site type",
+    x = "",  
+    y = "Daily bee abundance (count)"
+  ) +
+  
+  coord_cartesian(ylim = c(0, max(tukey_plot_data$y.position) * 1.05)) +
+  
+  base_theme +
+  theme(
+    legend.position = "none",
+    
+    # Background styling
+    panel.background = element_rect(fill = "#bbbbbbff", colour = NA),
+    plot.background = element_rect(fill = "#bbbbbbff", colour = NA),
+    
+    # Title font bigger 22, and centered
+    plot.title = element_text(hjust = 0.5, size = 22, face = "bold"),
+    
+    # Axis text styling
+    axis.text.x = element_text(size = 15, face = "bold", color = "black"),
+    axis.text.y = element_text(size = 16)
+  )
+
+# Display in R session
+print(p_mean_comparison)
+
+# Export the file
+#ggsave("box_plot_squished.png", 
+#       plot = p_mean_comparison, 
+#       width = 7, 
+#       height = 4.5, 
+#       units = "in", 
+#       dpi = 300)
 ```
 
 Okay lots of additions and redundant information, but this is basically here to
