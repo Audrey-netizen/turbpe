@@ -975,7 +975,7 @@ cat("Dimensions:", dim(sem_data_widthless), "\n")
 cat("Variables:", paste(colnames(sem_data_widthless), collapse = ", "), "\n")
 
 # Gotta chill again on creating extra files
-write_csv(sem_data_widthless, "sem_prepared_data_widthless.csv")
+# write_csv(sem_data_widthless, "sem_prepared_data_widthless.csv")
 cat("Dataset saved as 'sem_prepared_data_widthless.csv' yippeee\n")
 ```
 
