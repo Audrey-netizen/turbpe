@@ -12,6 +12,7 @@ Anyways first packages stuff, will keep the same package list across all files
 # R itself for this project is version 4.5.1 as of Oct 16th 2025
 library(corrplot) #V1.1.6
 library(dplyr) #V1.1.4
+library(FSA) #V0.10.1
 library(ggplot2) #V4.0.0
 library(ggpubr) #V0.6.1
 # I am pretty sure this package is no longer being used but keeping it here
@@ -22,6 +23,7 @@ library(piecewiseSEM) #V2.3.1
 library(readr) #V2.1.5
 # Apparently this is faster than read.csv? Will try it, hopefully nothing breaks
 # Also I am pretty sure this package is no longer being used but keeping it here
+library(Rmoji) #V0.1.0 #priorities
 library(rstatix) #V0.7.2
 # Again this package is no longer being used~ but keeping it here
 library(scales) #V1.4.0
@@ -34,10 +36,106 @@ BUT what I will do differently here, is work on datasets one at a time and bring
 them up when necessarily/applicable. I am not sure if this is the right way to
 go about things, but I will do so for now, maybe this approach will be good for
 me who knows?
-I also realize that "bees" is a different title to bee_captures(_8th) in the
-previous files, but this should have been how I went about it anyways, or rather
-the bee_captures_8th was always a placeholder
 ```{r}
-bees <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv")
+bee_captures <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv")
 ```
 
+Okay this is to make the base
+```{r}
+# Clean the data to create desired categories
+bee_captures <- read.csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv")
+
+bee_captures_clean <- bee_captures %>%
+  mutate(
+    # Combine Family and Genus for one collective placeholder diversity metric
+    # Since yknow sometimes there are species names that are shared between
+    # different genuses, then I realized that I'm an idiot because I'm only
+    # working on genus right now, but hey yknow what it's fine, later this can
+    # be swapped for Genus and species instead and all will be good in the world
+    Taxa = paste(Family, Genus, sep = "_"),
+    
+    # Make an actual category from the 2nd character of Site, something
+    # something dataframes are good for this sort of stuff?
+    Category_Code = substr(Site, 2, 2),
+    Category = case_when(
+      Category_Code == "P" ~ "Positive",
+      Category_Code == "T" ~ "Treatment",
+      Category_Code == "N" ~ "Negative",
+      TRUE ~ "Unknown"
+    ),
+    
+    # Define unique Sampling Event
+    Sampling_Event = paste(Site, Date, sep = "_")
+  )
+
+# Calculate observed richness per sampling event
+event_summary <- bee_captures_clean %>%
+  group_by(Category, Sampling_Event) %>%
+  summarise(
+    Observed_Richness = n_distinct(Taxa),
+    Total_Individuals = n(),
+    .groups = "drop"
+  )
+
+# Making observed diversity boxplot figure
+ggplot(event_summary, aes(x = Category, y = Observed_Richness, fill = Category)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_jitter(width = 0.2, alpha = 0.5) + # Optional: shows individual events
+  labs(title = "Observed Bee Diversity (Genus Level) per Sampling Event",
+       y = "Number of Unique Genera", 
+       x = "Treatment Category") +
+  theme_minimal()
+```
+
+Now to apply rarefaction
+```{r}
+# Define a target number of individuals (n). 
+# Samples with fewer than 'n' individuals will be excluded from the rarefied plot.
+n_target <- 5 
+
+rarefied_results <- bee_captures_clean %>%
+  group_by(Category, Sampling_Event) %>%
+  summarise(
+    # what is this why is this needed I don't get it aaaa
+    Rarefied_Richness = {
+      counts <- table(Taxa)
+      if(sum(counts) >= n_target) rarefy(counts, n_target) else NA
+    },
+    .groups = "drop"
+  ) %>%
+  filter(!is.na(Rarefied_Richness))
+
+# Making rarefied diversity boxplot figure
+ggplot(rarefied_results, aes(x = Category, y = Rarefied_Richness, fill = Category)) +
+  geom_boxplot(alpha = 0.7) +
+  geom_jitter(width = 0.2, alpha = 0.5) +
+  labs(title = paste("Rarefied Bee Diversity (at n =", n_target, "individuals)"),
+       subtitle = "Standardized diversity accounting for sampling effort",
+       y = "Expected Genus Richness", 
+       x = "Treatment Category") +
+  theme_minimal()
+```
+
+RAAAAAAA look the no statistical significance 🔥🔥🔥
+Oh right what was I saying, right this is the Kruskal-Wallis test, this is good
+for rarefied data and (later) alpha/beta diversity analyses I think?
+```{r}
+obs_test <- kruskal.test(Observed_Richness ~ Category, data = event_summary)
+print(obs_test)
+
+# If significant (p < 0.05), run a Post-hoc test to see which groups differ
+if(obs_test$p.value < 0.05) {
+  library(FSA)
+  dunnTest(Observed_Richness ~ Category, data = event_summary, method="bh")
+}
+```
+
+Wilcoxon/Mann-Whitney test
+```{r}
+# Filter for just the two main groups cuz negative is so obviously different and
+# messes with stats
+rar_subset <- rarefied_results %>% filter(Category %in% c("Positive", "Treatment"))
+
+wilcox_test <- wilcox.test(Rarefied_Richness ~ Category, data = rar_subset)
+print(wilcox_test)
+```

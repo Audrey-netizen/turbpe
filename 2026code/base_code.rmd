@@ -28,6 +28,7 @@ version of the package listed below.
 # R itself for this project is version 4.5.1 as of Oct 16th 2025
 library(corrplot) #V1.1.6
 library(dplyr) #V1.1.4
+library(FSA) #V0.10.1
 library(ggplot2) #V4.0.0
 library(ggpubr) #V0.6.1
 # I am pretty sure this package is no longer being used but keeping it here
@@ -38,6 +39,7 @@ library(piecewiseSEM) #V2.3.1
 library(readr) #V2.1.5
 # Apparently this is faster than read.csv? Will try it, hopefully nothing breaks
 # Also I am pretty sure this package is no longer being used but keeping it here
+library(Rmoji) #V0.1.0 #priorities
 library(rstatix) #V0.7.2
 # Again this package is no longer being used~ but keeping it here
 library(scales) #V1.4.0
