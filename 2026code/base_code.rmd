@@ -694,7 +694,23 @@ sem_data <- bee_summary %>%
   )
 ```
 
-Load up the piece of data we just made
+graaaaa this should be here in all files for continuity purposes, I am very
+dissapointed in younger me, but alas
+anyways this writes sem_prepared csv files which I need for future analyses. It
+was in the repository before but since my csv files got updated yknow I needed
+to remake them. This was the only chunk of write_csv stuff that was not in my
+conferences 2025 file and I really have no idea why
+```{r}
+cat("\nSummary statistics:\n")
+summary(sem_data %>% select(-Site, -Site_Type))
+
+# The below is a good use for the one time
+# write_csv(sem_data, "sem_prepared_data.csv")
+
+cat("\nData preparation complete! File saved as 'sem_prepared_data.csv'\n")
+```
+
+[Load up the piece of data we just made]
 New note: what the hell is this? How did I go about making a csv file that's
 "friendly for SEM analysis" but it clearly has to have been made with some sort
 of programming to put together? There should be some code previously for this, I
