@@ -1,1 +1,43 @@
-Sorry Gordon I got tired of everything being in one file
+Sorry Gordon I got tired of everything being in one file, it's just not for me
+Anyways I'll keep the rarefaction and like in here for now, may be changed in
+the future, I would like to have a lean comprehensive RMD document for the
+research related to this thesis (and definitely ones for separate publications),
+but that will be a final steps/touch ups thing. My brain works better with
+separate files in a directory I think. I mean rmd files are basically 
+collections of executable R files in one page, to me it's pointlessly
+ungraceful if I also don't separate like this
+
+Anyways first packages stuff, will keep the same package list across all files
+```{r}
+# R itself for this project is version 4.5.1 as of Oct 16th 2025
+library(corrplot) #V1.1.6
+library(dplyr) #V1.1.4
+library(ggplot2) #V4.0.0
+library(ggpubr) #V0.6.1
+# I am pretty sure this package is no longer being used but keeping it here
+library(ggsignif) #V0.6.4
+library(glmmTMB) #V1.1.13
+library(lavaan) #V0.6-20
+library(piecewiseSEM) #V2.3.1
+library(readr) #V2.1.5
+# Apparently this is faster than read.csv? Will try it, hopefully nothing breaks
+# Also I am pretty sure this package is no longer being used but keeping it here
+library(rstatix) #V0.7.2
+# Again this package is no longer being used~ but keeping it here
+library(scales) #V1.4.0
+library(semPlot) #V1.1.7
+library(tidyverse) #V2.0.0
+library(vegan) #V2.7-1
+```
+
+BUT what I will do differently here, is work on datasets one at a time and bring
+them up when necessarily/applicable. I am not sure if this is the right way to
+go about things, but I will do so for now, maybe this approach will be good for
+me who knows?
+I also realize that "bees" is a different title to bee_captures(_8th) in the
+previous files, but this should have been how I went about it anyways, or rather
+the bee_captures_8th was always a placeholder
+```{r}
+bees <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv")
+```
+

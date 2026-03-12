@@ -44,11 +44,11 @@ library(scales) #V1.4.0
 library(semPlot) #V1.1.7
 library(tidyverse) #V2.0.0
 library(vegan) #V2.7-1
-
-
 ```
 
 Loading up the csv files + assigning them variables
+AAAAAAAAAA I did this replicates 1-8 before omg I can't, well will fix that in
+due time
 ```{r}
 abiotics <- read_csv("~/Documents/repos/turbpe/spreadsheets/abiotics.csv")
 flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
