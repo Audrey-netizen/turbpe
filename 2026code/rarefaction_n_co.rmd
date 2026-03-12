@@ -139,3 +139,9 @@ rar_subset <- rarefied_results %>% filter(Category %in% c("Positive", "Treatment
 wilcox_test <- wilcox.test(Rarefied_Richness ~ Category, data = rar_subset)
 print(wilcox_test)
 ```
+
+Time to apply the same rarefaction to plants? I do have these at species level
+```{r}
+flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
+```
+
