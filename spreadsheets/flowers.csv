@@ -485,11 +485,11 @@ GT2,25-09-18,9,Erigeron,annuus,45
 GT2,25-09-18,9,Solidago,sp,4
 GT2,25-09-18,9,Chelone,glabra,19
 GT2,25-09-18,9,Symphyotrichum.novae,angliae,76
-GT2,25-09-18,9,Symphyotrichum,ericoides,sp,4
+GT2,25-09-18,9,Symphyotrichum,ericoides,4
 WT4,25-09-29,10,Solidago,altissima,18
 WT4,25-09-29,10,Linaria,vulgaris,22
 WT4,25-09-29,10,Symphyotrichum,novae-angliae,7
-WT4,25-09-29,10,Symphyotrichum,ericoides,sp,12
+WT4,25-09-29,10,Symphyotrichum,ericoides,12
 WN3,25-09-30,10,Trifolium,repens,6
 WN3,25-09-30,10,Medicago,lupulina,1
 WP3,25-09-30,10,Echinacea,purpurea,1
@@ -505,9 +505,9 @@ DT3,25-10-06,10,Augustache,foeniculum,1
 DP2,25-10-06,10,Symphyotrichum,novae-angliae,326
 DP2,25-10-06,10,Symphyotrichum,ericoides,,76
 DT2,25-10-06,10,Solidago,altissima,33
-DT2,25-10-06,10,Symphyotrichum,ericoides,sp,553
+DT2,25-10-06,10,Symphyotrichum,ericoides,553
 DT1,25-10-06,10,Solidago,altissima,11
-DT1,25-10-06,10,Symphyotrichum,ericoides,,26
+DT1,25-10-06,10,Symphyotrichum,ericoides,26
 DN1,25-10-06,10,Plantago,major,1
 DP3,25-10-06,10,Solidago,canadensis,22
 DP3,25-10-06,10,Linaria,vulgaris,60
