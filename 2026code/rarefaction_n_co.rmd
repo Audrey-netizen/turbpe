@@ -140,6 +140,140 @@ wilcox_test <- wilcox.test(Rarefied_Richness ~ Category, data = rar_subset)
 print(wilcox_test)
 ```
 
+I'm going to scratch the above for a bit here to try(?) and follow what Gordon
+said. Basically do sample based rarefaction first then a PCoA between the three
+groups for bee genus diversity... or well. Idk apparently pulling bees out from
+a bigger pool of bees can be helpful to test?
+```{r}
+
+# 1. Create a Community Matrix (Presence/Absence)
+# We need to know which Taxa appeared in which Sampling Event
+community_matrix <- bee_captures_clean %>%
+  group_by(Category, Sampling_Event, Taxa) %>%
+  summarise(Present = 1, .groups = "drop") %>%
+  pivot_wider(names_from = Taxa, values_from = Present, values_fill = 0)
+
+# 2. Split the data by Category to run accumulation for each
+# (This is how we 'pool' the observations by treatment)
+categories <- unique(community_matrix$Category)
+
+rarefaction_curves <- lapply(categories, function(cat) {
+  # Filter for the category and remove the metadata columns
+  site_data <- community_matrix %>% 
+    filter(Category == cat) %>% 
+    select(-Category, -Sampling_Event)
+  
+  # Run specaccum (sample-based)
+  curve <- specaccum(site_data, method = "random")
+  
+  # Convert to a tidy dataframe for ggplot
+  data.frame(
+    Category = cat,
+    Samples = curve$sites,
+    Richness = curve$richness,
+    SD = curve$sd
+  )
+}) %>% bind_rows()
+
+# 3. Plotting the Pool Accumulation
+ggplot(rarefaction_curves, aes(x = Samples, y = Richness, color = Category, fill = Category)) +
+  geom_line(linewidth = 1) +  # <--- Changed 'size' to 'linewidth'
+  geom_ribbon(aes(ymin = Richness - SD, ymax = Richness + SD), alpha = 0.2, color = NA) +
+  labs(title = "Sample-Based Rarefaction (Pool Observations)",
+       x = "Number of Sampling Events (Pools)",
+       y = "Cumulative Genus Richness") +
+  theme_minimal()
+# Whoahhhh the figure is so different looking, well actually I've seen this in
+# other scientific papers but cool to see it with my own stuff
+```
+
+PCoA plotting for this
+```{r}
+# 1. Prepare the distance matrix (using Jaccard for Presence/Absence)
+# We use the community_matrix from the previous step
+pure_matrix <- community_matrix %>% select(-Category, -Sampling_Event)
+dist_matrix <- vegdist(pure_matrix, method = "jaccard")
+
+# 2. Run the PCoA
+pcoa_res <- wcmdscale(dist_matrix, eig = TRUE)
+pcoa_scores <- as.data.frame(scores(pcoa_res))
+
+# Add the Category back in for coloring
+pcoa_scores$Category <- community_matrix$Category
+
+# 3. Calculate variance for labels
+var_exp <- round(pcoa_res$eig / sum(pcoa_res$eig) * 100, 1)
+
+# 4. Plotting with ggplot2
+ggplot(pcoa_scores, aes(x = Dim1, y = Dim2, color = Category, fill = Category)) +
+  # Using stat_ellipse to show grouping - this is where linewidth lives!
+  stat_ellipse(geom = "polygon", alpha = 0.1, linewidth = 0.5) + 
+  geom_point(size = 3, shape = 21, color = "black") + 
+  labs(
+    title = "PCoA of Bee Genus Composition",
+    subtitle = "Based on Sample-Based Presence/Absence (Jaccard Distance)",
+    x = paste0("PCoA1 (", var_exp[1], "%)"),
+    y = paste0("PCoA2 (", var_exp[2], "%)")
+  ) +
+  theme_minimal() +
+  coord_fixed() # Keeps the aspect ratio proportional to the variance
+```
+
+Permanova for all three hmm
+```{r}
+# The test: Does 'Category' explain the differences in community composition?
+# 'dist_matrix' is what you calculated for the PCoA
+permanova_res <- adonis2(dist_matrix ~ Category, data = community_matrix, permutations = 999)
+
+print(permanova_res)
+```
+
+Pairwise permanova tests
+```{r}
+# 1. Define the pairs we want to compare
+# This creates a list of vectors representing every combination of your 3 categories
+categories <- c("Wildflower park", "Wildflower roadside", "Mowed roadside")
+pairs <- combn(categories, 2, simplify = FALSE)
+
+# 2. Create a placeholder list to store results
+pairwise_results <- list()
+
+# 3. Loop through each pair and run the PERMANOVA
+for(i in 1:length(pairs)) {
+  
+  # Get the two categories for this iteration
+  cat_a <- pairs[[i]][1]
+  cat_b <- pairs[[i]][2]
+  
+  # Subset the metadata
+  sub_metadata <- community_matrix %>% 
+    filter(Category %in% c(cat_a, cat_b))
+  
+  # Subset the matrix (Rows must match the filtered metadata)
+  # We use the same logical filter used for the metadata
+  sub_matrix <- pure_matrix[community_matrix$Category %in% c(cat_a, cat_b), ]
+  
+  # Run adonis2 (Using Jaccard because we are using Presence/Absence data)
+  res <- adonis2(sub_matrix ~ Category, data = sub_metadata, method = "jaccard")
+  
+  # Extract the important bits (F-stat, R2, and p-value)
+  pairwise_results[[i]] <- data.frame(
+    Comparison = paste(cat_a, "vs", cat_b),
+    F_stat = res$F[1],
+    R2 = res$R2[1],
+    p_raw = res$`Pr(>F)`[1]
+  )
+}
+
+# 4. Combine results and adjust p-values
+# This is crucial! We use the 'Bonferroni' method to be statistically honest.
+final_table <- bind_rows(pairwise_results) %>%
+  mutate(p_adjusted = p.adjust(p_raw, method = "bonferroni"))
+
+# 5. View the final stats
+print(final_table)
+```
+
 Time to apply the same rarefaction to plants? I do have these at species level
 ```{r}
 flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")

@@ -28,7 +28,7 @@ version of the package listed below.
 # R itself for this project is version 4.5.1 as of Oct 16th 2025
 library(corrplot) #V1.1.6
 library(dplyr) #V1.1.4
-library(emeans) #V2.0.1
+library(emmeans) #V2.0.1
 library(FSA) #V0.10.1
 library(ggplot2) #V4.0.0
 library(ggpubr) #V0.6.1
@@ -1650,6 +1650,28 @@ print(p_mean_comparison)
 Log 10 transformed of previous info to do with the flower diversity at each
 site, but looking at all three categories not just treatment and positive
 ```{r}
+# Cleaning data that's scuffed now cuz of flowers.csv again
+plant_key <- plant_IDs %>%
+  distinct(ID, .keep_all = TRUE) %>%
+  mutate(Full_Name = paste(Genus, Species))
+
+flowers <- flowers %>%
+  # Fixes the "Site " trailing space in the header
+  rename_with(trimws) %>%
+  # Create the Taxonomic_Name column by combining Genus and species
+  unite("Taxonomic_Name", Genus, species, sep = " ", remove = FALSE) %>%
+  # Now create the Treatment_Type using the cleaned Site column
+  mutate(Treatment_Type = case_when(
+    grepl("^.[Tt]", Site) ~ "Treatment",
+    grepl("^.[Nn]", Site) ~ "Negative Control", 
+    grepl("^.[Pp]", Site) ~ "Positive Control",
+    TRUE ~ "Other"
+  ))
+
+observation_counts_by_treatment <- flowers %>%
+  count(Treatment_Type, Taxonomic_Name, name = "Observation_Count") %>%
+  arrange(Treatment_Type, desc(Observation_Count))
+
 # Making different categories from the second letter of the "Site" column
 flowers <- flowers %>%
   mutate(Treatment_Type = case_when(
@@ -2220,9 +2242,9 @@ anova_result <- anova(model_reduced, model_full)
 print(anova_result)
 ```
 
+Stats test of the above? Why is this here? Will likely cut it later once I 
+figure things out more
 ```{r}
-
-
 # Get the slopes (trends) for total_flowers for each Site_Type
 slopes <- emtrends(model_full, ~ Site_Type, var = "total_flowers")
 
@@ -2561,73 +2583,77 @@ print(p_traffic_log_log)
 #
 ```
 
-Last statistical test... for now (it's a liiitle bit)
-I swear this kinda gave small significance before TwT
+
+Flower richness vs roadside traffic associations... this one had to be
+significantly troubleshooted compared to the previous model that yknow I figure
+would be similar enough in code now but I guess not...
 ```{r}
-model_full_traffic_flowers <- glmmTMB(
-  flower_richness ~ log(mean_traffic + 1) * Site_Type + (1 | Site),
-  data = analysis_data,
-  family = nbinom1(link = "log")
-)
-
-# Reduced model without interaction (common slope)
-model_reduced_traffic_flowers <- glmmTMB(
-  flower_richness ~ log(mean_traffic + 1) + Site_Type + (1 | Site),
-  data = analysis_data,
-  family = nbinom1(link = "log")
-)
-
-# Likelihood ratio test for interaction
-anova_traffic_flowers <- anova(model_reduced_traffic_flowers, model_full_traffic_flowers)
-print("Does the flower richness-traffic relationship differ by Site Type?")
-print(anova_traffic_flowers)
-
-model_without_traffic_flowers <- glmmTMB(
-  flower_richness ~ Site_Type + (1 | Site),
-  data = analysis_data,
-  family = nbinom1(link = "log")
-)
-
-traffic_association_test_flowers <- anova(model_without_traffic_flowers, model_reduced_traffic_flowers)
-print("Does traffic significantly affect flower richness?")
-print(traffic_association_test_flowers)
-
-# Get coefficient and significance
-summary_traffic_flowers <- summary(model_reduced_traffic_flowers)
-print("Traffic coefficient and significance for flower richness:")
-traffic_coef_flowers <- summary_traffic_flowers$coefficients$cond["log(mean_traffic + 1)", ]
-print(traffic_coef_flowers)
-
-# Post-hoc comparisons if interaction is significant
-interaction_p_value <- anova_traffic_flowers$`Pr(>Chisq)`[2]
-
-if(!is.na(interaction_p_value) && interaction_p_value < 0.05) {
-  slope_comparisons_traffic_flowers <- emtrends(
-    model_full_traffic_flowers, 
-    specs = pairwise ~ Site_Type, 
-    var = "log(mean_traffic + 1)"
-  )
-  
-  print("Slope estimates by Site Type:")
-  print(slope_comparisons_traffic_flowers$emtrends)
-  
-  print("Pairwise comparisons of slopes:")
-  print(slope_comparisons_traffic_flowers$contrasts)
-} else {
-  if (is.na(interaction_p_value)) {
-    warning("Interaction test p-value is NA. Check model convergence!")
-  } else {
-    print(paste0("Interaction not significant (P = ", round(interaction_p_value, 4), "). Post-hoc comparisons skipped."))
-  }
+# Create the site type function 
+# This was a terminal fix for the previous issue I am just reapplying here
+create_site_type <- function(site_code) {
+  site_code <- toupper(trimws(as.character(site_code)))
+  if (grepl("P", site_code)) return("Positive Control")
+  if (grepl("N", site_code)) return("Negative Control") 
+  if (grepl("T", site_code)) return("Treatment")
+  return("Other")
 }
+
+# Assemble the MASTER dataframe
+sem_data_widthless <- bee_summary %>%
+  # Fix Site names on the fly during joins
+  mutate(Site = trimws(Site)) %>%
+  full_join(flower_summary %>% mutate(Site = trimws(Site)), by = c("Site", "Replicate")) %>%
+  left_join(abiotic_summary %>% mutate(Site = trimws(Site)), by = c("Site", "Replicate")) %>%
+  left_join(bee_diversity_indices %>% mutate(Site = trimws(Site)), by = c("Site", "Replicate")) %>%
+  left_join(flower_diversity_indices %>% mutate(Site = trimws(Site)), by = c("Site", "Replicate")) %>%
+  # CREATE ALL NECESSARY COLUMNS HERE
+  mutate(
+    Site_Type = sapply(Site, create_site_type),
+    # Ensure total_traffic exists (summing across traffic types)
+    total_traffic = replace_na(total_traffic_passenger, 0) + 
+                    replace_na(total_traffic_bike, 0) + 
+                    replace_na(total_traffic_truck, 0),
+    # Calculate the mean traffic the model is looking for
+    mean_traffic = total_traffic / 3,
+    # Fill NAs for richness/abundance so the model doesn't drop rows
+    across(c(bee_abundance, bee_richness, total_flowers, flower_richness), ~replace_na(., 0)),
+    bee_shannon = replace_na(bee_shannon, 0),
+    flower_shannon = replace_na(flower_shannon, 0)
+  )
+
+# Verify one more time
+cat("Checking columns:", colnames(sem_data_widthless), "\n")
+table(sem_data_widthless$Site_Type)
 ```
 
 ```{r}
+# Prepare the final model data
+analysis_data <- sem_data_widthless %>%
+  filter(!is.na(mean_traffic)) %>%
+  mutate(
+    Site_Type = factor(Site_Type),
+    # Scaling fixes the "Convergence" error you were seeing earlier
+    log_traffic_scaled = scale(log(mean_traffic + 1))
+  )
 
-# Extract the trends for flower richness vs traffic
+# Run the model
+model_full_traffic_flowers <- glmmTMB(
+  flower_richness ~ log_traffic_scaled * Site_Type + (1 | Site),
+  data = analysis_data,
+  family = nbinom1(link = "log")
+)
+
+# This should now work!
+summary(model_full_traffic_flowers)
+```
+
+Stats significance check
+```{r}
+
+# Extract the trends using the scaled variable name
 flower_traffic_slopes <- emtrends(model_full_traffic_flowers, 
                                   specs = ~ Site_Type, 
-                                  var = "log(mean_traffic + 1)")
+                                  var = "log_traffic_scaled")
 
 # View the results
 print(flower_traffic_slopes)
