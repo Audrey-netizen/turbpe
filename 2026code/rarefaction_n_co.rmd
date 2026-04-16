@@ -58,9 +58,9 @@ bee_captures_clean <- bee_captures %>%
     # something dataframes are good for this sort of stuff?
     Category_Code = substr(Site, 2, 2),
     Category = case_when(
-      Category_Code == "P" ~ "Positive",
-      Category_Code == "T" ~ "Treatment",
-      Category_Code == "N" ~ "Negative",
+      Category_Code == "P" ~ "Wildflower park",
+      Category_Code == "T" ~ "Wildflower roadside",
+      Category_Code == "N" ~ "Mowed roadside",
       TRUE ~ "Unknown"
     ),
     
@@ -112,7 +112,7 @@ ggplot(rarefied_results, aes(x = Category, y = Rarefied_Richness, fill = Categor
   labs(title = paste("Rarefied Bee Diversity (at n =", n_target, "individuals)"),
        subtitle = "Standardized diversity accounting for sampling effort",
        y = "Expected Genus Richness", 
-       x = "Treatment Category") +
+       x = "Site type") +
   theme_minimal()
 ```
 
