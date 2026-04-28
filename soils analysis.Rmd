@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r}
-# R itself for this project is version 4.5.1 as of Oct 16th 2025
+# R itself for this project is version 4.5.2 as of Oct 16th 2025
 library(corrplot) #V1.1.6
 library(dplyr) #V1.1.4
 library(factoextra) #v2.0.0
@@ -33,6 +33,7 @@ library(vegan) #V2.7-1
 ### Read in data
 ```{r}
 soils <- read_csv("~/Documents/repos/turbpe/spreadsheets/soil.csv")
+bee_captures <- read_csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv")
 ```
 
 ### Run PCA and basic plot
@@ -151,3 +152,56 @@ ggplot() +
         panel.grid.minor = element_blank(),  #remove minor-grid labels
         plot.background = element_blank())
 ```
+
+Follow-up here, I wanna compare soil NMDS data per site type to average bee
+captures per site each sampling sorted by site type. Past this I think it's
+redundant to analyze for now since it'll just give more lack of associations
+right?
+```{r}
+# Process Bee Captures in memory
+# Counting bees per Site per Date, then average those daily counts per Site
+bee_abundance_stats <- bee_captures %>%
+  # Identify Type based on the first letter of the Site column
+  mutate(type_from_bee = case_when(
+    grepl("^P", Site) ~ "Positive control",
+    grepl("^N", Site) ~ "Negative control",
+    grepl("^T", Site) ~ "Treatment",
+    TRUE ~ "Other"
+  )) %>%
+  # Step A: Get total bees caught per unique day at each site
+  group_by(Site, Date, type_from_bee) %>%
+  summarise(daily_total = n(), .groups = "drop") %>%
+  # Step B: Get the average of those daily totals for each site
+  group_by(Site) %>%
+  summarise(avg_bee_abundance = mean(daily_total), .groups = "drop")
+
+# Fix Site name mapping in NMDS scores
+# Note the backticks used for the column name with spaces
+data.scores$sample <- soils$`Client Sample ID`
+
+# Join the bee stats to NMDS coordinates
+# This adds 'avg_bee_abundance' as a column to your data.scores
+data.scores <- data.scores %>%
+  left_join(bee_abundance_stats, by = c("sample" = "Site"))
+
+# Plot NMDS with point size reflecting Bee Abundance
+ggplot() + 
+  # Add the hulls from your original code
+  geom_polygon(data=hull.data, aes(x=NMDS1, y=NMDS2, fill=type, group=type), alpha=0.2) +
+  # Add element (species) labels
+  geom_text(data=element.scores, aes(x=NMDS1, y=NMDS2, label=elements), alpha=0.4, size=3) +
+  # Add points where SIZE is determined by bee abundance
+  geom_point(data=data.scores, aes(x=NMDS1, y=NMDS2, shape=type, colour=type, size=avg_bee_abundance)) +
+  scale_size_continuous(name = "Avg Daily Bees") +
+  coord_equal() +
+  theme_bw() + 
+  labs(title = "Soil NMDS Ordination",
+       subtitle = "Point size represents average bees caught per sampling day") +
+  theme(panel.grid = element_blank())
+
+# Quick Correlation Test
+# Does the soil gradient (NMDS1) correlate with bee abundance?
+cor.test(data.scores$NMDS1, data.scores$avg_bee_abundance, method = "spearman")
+```
+Gawdamn this NMDS figure is useless, well at least it gives the obvious
+association I was after

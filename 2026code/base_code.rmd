@@ -35,6 +35,7 @@ library(ggpubr) #V0.6.1
 # I am pretty sure this package is no longer being used but keeping it here
 library(ggsignif) #V0.6.4
 library(glmmTMB) #V1.1.13
+library(janitor) #V2.2.1
 library(lavaan) #V0.6-20
 library(piecewiseSEM) #V2.3.1
 library(readr) #V2.1.5
@@ -2662,3 +2663,239 @@ print(flower_traffic_slopes)
 FYI if anybody was wondering why I left testing the statistical significance of
 these models for so late... I already went through them when trying to work
 through SEM stuff, but just wanted to add it in here for clarity
+
+Adding in analyses to compare road width to bee abundance/diversity and plant
+diversity
+```{r}
+# Process Bee Abundance
+# We count total bees per Site/Date, then average those daily totals for each Site
+site_abundance <- bee_captures %>%
+  group_by(Site, Date) %>%
+  summarise(daily_total = n(), .groups = "drop") %>%
+  group_by(Site) %>%
+  summarise(avg_daily_abundance = mean(daily_total))
+
+# Clean Road Width Data
+# Using backticks for "Road Width (m)" because read_csv preserves spaces
+road_data_clean <- road_widths %>%
+  select(Site, `Road Width (m)`) %>% 
+  filter(!is.na(Site))
+
+# Merge and Filter Site Types
+# We only keep Treatment (T) and Negative Control (N) sites
+final_data <- inner_join(site_abundance, road_data_clean, by = "Site") %>%
+  mutate(SiteType = substr(Site, 2, 2)) %>%
+  filter(SiteType %in% c("T", "N"))
+
+# Run the Three Models
+
+# --- Model 1: Treatment sites only ---
+# (Sites like DT1, GT3 where the second character is 'T')
+treatment_df <- final_data %>% filter(SiteType == "T")
+model_treatment <- lm(avg_daily_abundance ~ `Road Width (m)`, data = treatment_df)
+
+print("--- SUMMARY: TREATMENT SITES ONLY ---")
+summary(model_treatment)
+
+# --- Model 2: Negative control sites only ---
+# (Sites like DN3, WN2 where the second character is 'N')
+negative_df <- final_data %>% filter(SiteType == "N")
+model_negative <- lm(avg_daily_abundance ~ `Road Width (m)`, data = negative_df)
+
+print("--- SUMMARY: NEGATIVE CONTROL SITES ONLY ---")
+summary(model_negative)
+
+# --- Model 3: Combined (Treatment + Negative Control) ---
+model_combined <- lm(avg_daily_abundance ~ `Road Width (m)`, data = final_data)
+
+print("--- SUMMARY: COMBINED SITES ---")
+summary(model_combined)
+```
+
+Line graphs for these
+```{r}
+# Prepare the plotting data (assuming final_data from previous step)
+# Data is sorted by Road Width so the 'broken line' connects points in order
+plot_data <- final_data %>%
+  arrange(`Road Width (m)`)
+
+# 1. Plot: Treatment Sites
+ggplot(subset(plot_data, SiteType == "T"), aes(x = `Road Width (m)`, y = avg_daily_abundance)) +
+  geom_line(color = "blue", alpha = 0.4) + # The 'broken line' connecting points
+  geom_point(color = "blue", size = 3) +
+  geom_smooth(method = "lm", color = "darkblue", se = TRUE) + # The linear trend
+  labs(title = "Treatment Sites: Road Width vs Bee Abundance",
+       subtitle = "Blue line = connected data points; Dark blue = linear trend",
+       y = "Avg Daily Abundance", x = "Road Width (m)") +
+  theme_minimal()
+
+# 2. Plot: Negative Control Sites
+ggplot(subset(plot_data, SiteType == "N"), aes(x = `Road Width (m)`, y = avg_daily_abundance)) +
+  geom_line(color = "red", alpha = 0.4) +
+  geom_point(color = "red", size = 3) +
+  geom_smooth(method = "lm", color = "darkred", se = TRUE) +
+  labs(title = "Negative Control Sites: Road Width vs Bee Abundance",
+       y = "Avg Daily Abundance", x = "Road Width (m)") +
+  theme_minimal()
+
+# 3. Plot: Combined
+ggplot(plot_data, aes(x = `Road Width (m)`, y = avg_daily_abundance)) +
+  geom_point(aes(color = SiteType), size = 3) +
+  geom_smooth(method = "lm", color = "black", se = TRUE) +
+  labs(title = "Combined Sites: Road Width vs Bee Abundance",
+       subtitle = "Black line represents the overall linear trend",
+       y = "Avg Daily Abundance", x = "Road Width (m)") +
+  scale_color_manual(values = c("N" = "red", "T" = "blue"), labels = c("Negative", "Treatment")) +
+  theme_minimal()
+```
+
+Now to look at bee genus diversity
+```{r}
+# Process Bee Diversity
+# We count unique Genera per Site and divide by the count of unique Dates per Site
+site_diversity <- bee_captures %>%
+  group_by(Site) %>%
+  summarise(
+    unique_genera = n_distinct(Genus, na.rm = TRUE),
+    sampling_days = n_distinct(Date),
+    avg_diversity = unique_genera / sampling_days,
+    .groups = "drop"
+  )
+
+# Clean Road Width Data
+road_data_clean <- road_widths %>%
+  select(Site, `Road Width (m)`) %>% 
+  filter(!is.na(Site))
+
+# Merge and Filter Site Types
+final_diversity_data <- inner_join(site_diversity, road_data_clean, by = "Site") %>%
+  mutate(SiteType = substr(Site, 2, 2)) %>%
+  filter(SiteType %in% c("T", "N"))
+
+# Run the Three Models (Diversity)
+
+# Model 1: Treatment sites
+model_div_treatment <- lm(avg_diversity ~ `Road Width (m)`, 
+                          data = subset(final_diversity_data, SiteType == "T"))
+print("--- SUMMARY: DIVERSITY AT TREATMENT SITES ---")
+summary(model_div_treatment)
+
+# Model 2: Negative control sites
+model_div_negative <- lm(avg_diversity ~ `Road Width (m)`, 
+                         data = subset(final_diversity_data, SiteType == "N"))
+print("--- SUMMARY: DIVERSITY AT NEGATIVE CONTROL SITES ---")
+summary(model_div_negative)
+
+# Model 3: Combined
+model_div_combined <- lm(avg_diversity ~ `Road Width (m)`, data = final_diversity_data)
+print("--- SUMMARY: DIVERSITY COMBINED ---")
+summary(model_div_combined)
+
+# Visualization have data sorted by Road Width for the broken line
+plot_div_data <- final_diversity_data %>% arrange(`Road Width (m)`)
+
+# Plot: Treatment Sites
+ggplot(subset(plot_div_data, SiteType == "T"), aes(x = `Road Width (m)`, y = avg_diversity)) +
+  geom_line(color = "blue", alpha = 0.4) +
+  geom_point(color = "blue", size = 3) +
+  geom_smooth(method = "lm", color = "darkblue", se = TRUE) +
+  labs(title = "Treatment Sites: Road Width vs Genus Diversity",
+       y = "Avg Diversity (Unique Genera / Days)", x = "Road Width (m)") +
+  theme_minimal()
+
+# Plot: Negative Control Sites
+ggplot(subset(plot_div_data, SiteType == "N"), aes(x = `Road Width (m)`, y = avg_diversity)) +
+  geom_line(color = "red", alpha = 0.4) +
+  geom_point(color = "red", size = 3) +
+  geom_smooth(method = "lm", color = "darkred", se = TRUE) +
+  labs(title = "Negative Control Sites: Road Width vs Genus Diversity",
+       y = "Avg Diversity (Unique Genera / Days)", x = "Road Width (m)") +
+  theme_minimal()
+
+# Plot: Combined
+ggplot(plot_div_data, aes(x = `Road Width (m)`, y = avg_diversity)) +
+  geom_point(aes(color = SiteType), size = 3) +
+  geom_smooth(method = "lm", color = "black", se = TRUE) +
+  labs(title = "Combined Sites: Road Width vs Genus Diversity",
+       y = "Avg Diversity (Unique Genera / Days)", x = "Road Width (m)") +
+  scale_color_manual(values = c("N" = "red", "T" = "blue"), labels = c("Negative", "Treatment")) +
+  theme_minimal()
+```
+
+Same again now for flower diversity
+```{r}
+# Process Flower Diversity
+colnames(flowers) <- trimws(colnames(flowers))
+
+site_flower_diversity <- flowers %>%
+  # Create a unique Taxa column (Genus + species)
+  mutate(Taxa = paste(Genus, species)) %>%
+  group_by(Site) %>%
+  summarise(
+    unique_taxa = n_distinct(Taxa, na.rm = TRUE),
+    sampling_days = n_distinct(Date),
+    avg_flower_diversity = unique_taxa / sampling_days,
+    .groups = "drop"
+  )
+
+# Clean Road Width Data (this can be cut right cuz it's already been done in
+# earlier code chunks?)
+road_data_clean <- road_widths %>%
+  select(Site, `Road Width (m)`) %>% 
+  filter(!is.na(Site))
+
+# Merge and Filter Site Types
+final_flower_data <- inner_join(site_flower_diversity, road_data_clean, by = "Site") %>%
+  mutate(SiteType = substr(Site, 2, 2)) %>%
+  filter(SiteType %in% c("T", "N"))
+
+# Run the Three Models (Flower Diversity)
+
+# Model 1: Treatment sites
+model_fl_treatment <- lm(avg_flower_diversity ~ `Road Width (m)`, 
+                          data = subset(final_flower_data, SiteType == "T"))
+print("--- SUMMARY: FLOWER DIVERSITY AT TREATMENT SITES ---")
+summary(model_fl_treatment)
+
+# Model 2: Negative control sites
+model_fl_negative <- lm(avg_flower_diversity ~ `Road Width (m)`, 
+                         data = subset(final_flower_data, SiteType == "N"))
+print("--- SUMMARY: FLOWER DIVERSITY AT NEGATIVE CONTROL SITES ---")
+summary(model_fl_negative)
+
+# Model 3: Combined
+model_fl_combined <- lm(avg_flower_diversity ~ `Road Width (m)`, data = final_flower_data)
+print("--- SUMMARY: FLOWER DIVERSITY COMBINED ---")
+summary(model_fl_combined)
+
+# Visualization
+# Ensure data is sorted by Road Width for the broken line
+plot_fl_data <- final_flower_data %>% arrange(`Road Width (m)`)
+
+# Plot: Treatment Sites
+ggplot(subset(plot_fl_data, SiteType == "T"), aes(x = `Road Width (m)`, y = avg_flower_diversity)) +
+  geom_line(color = "blue", alpha = 0.4) +
+  geom_point(color = "blue", size = 3) +
+  geom_smooth(method = "lm", color = "darkblue", se = TRUE) +
+  labs(title = "Treatment Sites: Road Width vs Flower Diversity",
+       y = "Avg Diversity (Taxa / Days)", x = "Road Width (m)") +
+  theme_minimal()
+
+# Plot: Negative Control Sites
+ggplot(subset(plot_fl_data, SiteType == "N"), aes(x = `Road Width (m)`, y = avg_flower_diversity)) +
+  geom_line(color = "red", alpha = 0.4) +
+  geom_point(color = "red", size = 3) +
+  geom_smooth(method = "lm", color = "darkred", se = TRUE) +
+  labs(title = "Negative Control Sites: Road Width vs Flower Diversity",
+       y = "Avg Diversity (Taxa / Days)", x = "Road Width (m)") +
+  theme_minimal()
+
+# Plot: Combined
+ggplot(plot_fl_data, aes(x = `Road Width (m)`, y = avg_flower_diversity)) +
+  geom_point(aes(color = SiteType), size = 3) +
+  geom_smooth(method = "lm", color = "black", se = TRUE) +
+  labs(title = "Combined Sites: Road Width vs Flower Diversity",
+       y = "Avg Diversity (Taxa / Days)", x = "Road Width (m)") +
+  scale_color_manual(values = c("N" = "red", "T" = "blue"), labels = c("Negative", "Treatment")) +
+  theme_minimal()
+```
