@@ -244,7 +244,7 @@ Plant_ID,Site,Time,Date,Replicate,Family,Genus,Species,Unique_ID,drying,etc,sex,
 127,GN1,10:27,2025-07-09,4,Halictidae,Lasioglossum,leucozonium,,,,f,0
 132,GP1,12:12,2025-07-09,4,Halictidae,Lasioglossum,admirandum,,,,f,1
 23,WN3,12:46,2025-07-10,4,Andrenidae,Andrena,dunnigi,,,,f,1
-134,WT1,13:46,2025-07-10,5,Colletidae,Hylaeus,hylanictus,,,m,0
+134,WT1,13:46,2025-07-10,5,Colletidae,Hylaeus,hylanictus,,,,m,0
 134,WT1,13:50,2025-07-10,5,Colletidae,Hylaeus,punctatus,,,,f,0
 134,WT1,13:56,2025-07-10,5,Colletidae,Hylaeus,punctatus,,,,f,0
 134,WT1,13:57,2025-07-10,5,Colletidae,Hylaeus,punctatus,,,,m,0
