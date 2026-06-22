@@ -253,7 +253,7 @@ for(i in 1:length(pairs)) {
   # We use the same logical filter used for the metadata
   sub_matrix <- pure_matrix[community_matrix$Category %in% c(cat_a, cat_b), ]
   
-  # Run adonis2 (Using Jaccard because we are using Presence/Absence data)
+  # Run adonis2 (Using Jaccard because this is using Presence/Absence data)
   res <- adonis2(sub_matrix ~ Category, data = sub_metadata, method = "jaccard")
   
   # Extract the important bits (F-stat, R2, and p-value)
@@ -278,4 +278,3 @@ Time to apply the same rarefaction to plants? I do have these at species level
 ```{r}
 flowers <- read_csv("~/Documents/repos/turbpe/spreadsheets/flowers.csv")
 ```
-
