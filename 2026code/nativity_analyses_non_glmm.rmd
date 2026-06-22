@@ -1,0 +1,1265 @@
+Loading packages
+```{r}
+# Load required libraries
+library(tidyverse)
+library(ggplot2)
+library(rstatix)
+```
+
+Reading relevant csvs
+```{r}
+# Read the data files
+flowers <- read.csv("~/Documents/repos/turbpe/spreadsheets/flowers_number_coded_nativity.csv")
+bees <- read.csv("~/Documents/repos/turbpe/spreadsheets/bee_captures.csv")
+```
+
+```{r}
+# Clean the data
+# Remove rows with missing nativity values in flowers data
+flowers_clean <- flowers %>%
+  filter(!is.na(nativity)) %>%
+  mutate(Type = "Flowers")
+
+# Clean bee data - remove rows with missing nativity
+bees_clean <- bees %>%
+  filter(!is.na(nativity)) %>%
+  mutate(Type = "Bees")
+
+# Calculate proportions for flowers
+flowers_summary <- flowers_clean %>%
+  group_by(nativity) %>%
+  summarise(
+    count = n(),
+    proportion = n() / nrow(flowers_clean) * 100
+  ) %>%
+  mutate(
+    nativity_status = case_when(
+      nativity == 1 ~ "Native",
+      nativity == 0 ~ "Non-native"
+    ),
+    Type = "Flowers"
+  )
+
+# Calculate proportions for bees
+bees_summary <- bees_clean %>%
+  group_by(nativity) %>%
+  summarise(
+    count = n(),
+    proportion = n() / nrow(bees_clean) * 100
+  ) %>%
+  mutate(
+    nativity_status = case_when(
+      nativity == 1 ~ "Native",
+      nativity == 0 ~ "Non-native"
+    ),
+    Type = "Bees"
+  )
+
+# Print summary statistics
+cat("========== FLOWER OBSERVATIONS ==========\n")
+cat("Total observations:", nrow(flowers_clean), "\n")
+print(flowers_summary)
+cat("\n")
+
+cat("========== BEE CAPTURES ==========\n")
+cat("Total captures:", nrow(bees_clean), "\n")
+print(bees_summary)
+cat("\n")
+
+# Prepare data for statistical testing
+# Create a combined dataset for flowers
+flowers_individual <- flowers_clean %>%
+  select(nativity, Type) %>%
+  mutate(nativity_status = ifelse(nativity == 1, "Native", "Non-native"))
+
+# Create a combined dataset for bees
+bees_individual <- bees_clean %>%
+  select(nativity, Type) %>%
+  mutate(nativity_status = ifelse(nativity == 1, "Native", "Non-native"))
+
+# Combine datasets
+combined_data <- bind_rows(flowers_individual, bees_individual)
+
+# Create a contingency table for chi-square test
+contingency_table <- table(combined_data$Type, combined_data$nativity_status)
+cat("========== CONTINGENCY TABLE ==========\n")
+print(contingency_table)
+cat("\n")
+
+# Chi-square test to compare proportions between flowers and bees
+chi_square_result <- chisq.test(contingency_table)
+cat("========== CHI-SQUARE TEST RESULTS ==========\n")
+cat("Chi-square statistic:", chi_square_result$statistic, "\n")
+cat("Degrees of freedom:", chi_square_result$parameter, "\n")
+cat("P-value:", chi_square_result$p.value, "\n")
+
+# Calculate effect size (Cramer's V)
+cramer_v <- sqrt(chi_square_result$statistic / 
+                   (sum(contingency_table) * (min(dim(contingency_table)) - 1)))
+cat("Cramer's V (effect size):", cramer_v, "\n")
+
+# Interpret p-value
+if(chi_square_result$p.value < 0.001) {
+  cat("Interpretation: Highly significant difference (p < 0.001)\n")
+} else if(chi_square_result$p.value < 0.01) {
+  cat("Interpretation: Very significant difference (p < 0.01)\n")
+} else if(chi_square_result$p.value < 0.05) {
+  cat("Interpretation: Significant difference (p < 0.05)\n")
+} else {
+  cat("Interpretation: No significant difference (p >= 0.05)\n")
+}
+cat("\n")
+
+# Calculate proportions with confidence intervals for boxplot
+proportion_data <- combined_data %>%
+  group_by(Type) %>%
+  summarise(
+    n_native = sum(nativity_status == "Native"),
+    n_non_native = sum(nativity_status == "Non-native"),
+    total = n(),
+    proportion_native = n_native / total * 100,
+    proportion_non_native = n_non_native / total * 100
+  ) %>%
+  pivot_longer(cols = c(proportion_native, proportion_non_native),
+               names_to = "nativity_status",
+               values_to = "proportion") %>%
+  mutate(
+    nativity_status = ifelse(nativity_status == "proportion_native", "Native", "Non-native"),
+    nativity_status = factor(nativity_status, levels = c("Native", "Non-native")),
+    Type = factor(Type, levels = c("Flowers", "Bees"))
+  )
+
+# Bootstrap for confidence intervals
+set.seed(123)
+bootstrap_props <- function(data, type_name, n_bootstrap = 1000) {
+  type_data <- data %>% filter(Type == type_name)
+  n_total <- nrow(type_data)
+  
+  native_props <- replicate(n_bootstrap, {
+    boot_sample <- sample(type_data$nativity_status, n_total, replace = TRUE)
+    sum(boot_sample == "Native") / n_total * 100
+  })
+  
+  non_native_props <- replicate(n_bootstrap, {
+    boot_sample <- sample(type_data$nativity_status, n_total, replace = TRUE)
+    sum(boot_sample == "Non-native") / n_total * 100
+  })
+  
+  return(list(
+    native = quantile(native_props, c(0.025, 0.975)),
+    non_native = quantile(non_native_props, c(0.025, 0.975))
+  ))
+}
+
+flowers_ci <- bootstrap_props(combined_data, "Flowers")
+bees_ci <- bootstrap_props(combined_data, "Bees")
+
+# Add confidence intervals to proportion_data
+proportion_data <- proportion_data %>%
+  mutate(
+    lower_ci = case_when(
+      Type == "Flowers" & nativity_status == "Native" ~ flowers_ci$native[1],
+      Type == "Flowers" & nativity_status == "Non-native" ~ flowers_ci$non_native[1],
+      Type == "Bees" & nativity_status == "Native" ~ bees_ci$native[1],
+      Type == "Bees" & nativity_status == "Non-native" ~ bees_ci$non_native[1]
+    ),
+    upper_ci = case_when(
+      Type == "Flowers" & nativity_status == "Native" ~ flowers_ci$native[2],
+      Type == "Flowers" & nativity_status == "Non-native" ~ flowers_ci$non_native[2],
+      Type == "Bees" & nativity_status == "Native" ~ bees_ci$native[2],
+      Type == "Bees" & nativity_status == "Non-native" ~ bees_ci$non_native[2]
+    )
+  )
+
+# Perform pairwise proportion tests
+pairwise_test <- prop.test(x = c(sum(flowers_individual$nativity == 1), 
+                                  sum(bees_individual$nativity == 1)),
+                            n = c(nrow(flowers_individual), 
+                                  nrow(bees_individual)))
+
+cat("========== PAIRWISE PROPORTION TEST ==========\n")
+cat("Flowers native proportion:", 
+    sum(flowers_individual$nativity == 1)/nrow(flowers_individual) * 100, "%\n")
+cat("Bees native proportion:", 
+    sum(bees_individual$nativity == 1)/nrow(bees_individual) * 100, "%\n")
+cat("Difference:", abs(sum(flowers_individual$nativity == 1)/nrow(flowers_individual) - 
+                        sum(bees_individual$nativity == 1)/nrow(bees_individual)) * 100, "%\n")
+cat("P-value:", pairwise_test$p.value, "\n")
+cat("95% Confidence interval for difference:", 
+    round(pairwise_test$conf.int[1] * 100, 2), "% to", 
+    round(pairwise_test$conf.int[2] * 100, 2), "%\n")
+cat("\n")
+
+# Create the boxplot figure
+p <- ggplot(proportion_data, aes(x = Type, y = proportion, fill = nativity_status)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), 
+           width = 0.7, alpha = 0.8) +
+  geom_errorbar(aes(ymin = lower_ci, ymax = upper_ci),
+                position = position_dodge(width = 0.9), width = 0.25, 
+                size = 0.8) +
+  # Add significance annotation
+  annotate("text", x = 1.5, y = max(proportion_data$upper_ci) + 5,
+           label = ifelse(chi_square_result$p.value < 0.001, "***",
+                         ifelse(chi_square_result$p.value < 0.01, "**",
+                               ifelse(chi_square_result$p.value < 0.05, "*", "n.s."))),
+           size = 8, fontface = "bold") +
+  # Add bracket for significance
+  annotate("segment", x = 1.2, xend = 1.8, 
+           y = max(proportion_data$upper_ci) + 3,
+           yend = max(proportion_data$upper_ci) + 3,
+           size = 0.8) +
+  labs(
+    title = "Native vs exotic proportions of flower/bee observations",
+    subtitle = paste0("Flowers vs Bees | Chi-square p-value: ", 
+                      format(chi_square_result$p.value, scientific = TRUE, digits = 3)),
+    x = "Observation Type",
+    y = "Proportion (%)",
+    fill = "Nativity Status"
+  ) +
+  scale_fill_manual(values = c("Native" = "#265380", "Non-native" = "#E3DE2D")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 12),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 11),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(fill = NA, color = "grey50", size = 0.5)
+  ) +
+  scale_y_continuous(limits = c(0, max(proportion_data$upper_ci) + 10),
+                     breaks = seq(0, 100, by = 10))
+
+# Display the plot
+print(p)
+
+# Save the plot
+#ggsave("nativity_comparison_boxplot.png", p, width = 8, height = 6, dpi = 300)
+
+# Additional analysis: Test within each group if proportions differ from 50:50
+cat("========== WITHIN-GROUP ANALYSES ==========\n")
+
+# Test if flower observations deviate from 50:50 native:non-native
+flower_binom <- binom.test(sum(flowers_individual$nativity == 1), 
+                           nrow(flowers_individual), p = 0.5)
+cat("Flowers - Binomial test (50:50 expectation):\n")
+cat("  P-value:", flower_binom$p.value, "\n")
+cat("  95% CI for native proportion:", 
+    round(flower_binom$conf.int[1] * 100, 2), "% to",
+    round(flower_binom$conf.int[2] * 100, 2), "%\n\n")
+
+# Test if bee captures deviate from 50:50 native:non-native
+bee_binom <- binom.test(sum(bees_individual$nativity == 1), 
+                        nrow(bees_individual), p = 0.5)
+cat("Bees - Binomial test (50:50 expectation):\n")
+cat("  P-value:", bee_binom$p.value, "\n")
+cat("  95% CI for native proportion:", 
+    round(bee_binom$conf.int[1] * 100, 2), "% to",
+    round(bee_binom$conf.int[2] * 100, 2), "%\n\n")
+
+# Additional visualization: Stacked bar chart
+p_stacked <- ggplot(proportion_data, aes(x = Type, y = proportion, fill = nativity_status)) +
+  geom_bar(stat = "identity", position = "stack", width = 0.6) +
+  geom_text(aes(label = paste0(round(proportion, 1), "%")),
+            position = position_stack(vjust = 0.5), size = 4.5) +
+  labs(
+    title = "Native vs Non-native Composition",
+    x = "Observation Type",
+    y = "Proportion (%)",
+    fill = "Nativity Status"
+  ) +
+  scale_fill_manual(values = c("Native" = "#265380", "Non-native" = "#E3DE2D")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+print(p_stacked)
+#ggsave("nativity_stacked_barchart.png", p_stacked, width = 6, height = 5, dpi = 300)
+```
+
+Comparing what proportion of native bees landed on native vs non-native flowers
+to that of non-native bees
+```{r}
+# Bee-flower interactions analysis by nativity
+
+# Merge bee captures with flower nativity data
+# First, rename columns to avoid confusion
+flowers_for_merge <- flowers_clean %>%
+  select(Species_ID, nativity) %>%
+  rename(flower_nativity = nativity,
+         Plant_ID = Species_ID) %>%
+  distinct(Plant_ID, flower_nativity)  # Keep unique plant IDs
+
+# Join bee data with flower nativity
+bee_flower_interactions <- bees_clean %>%
+  left_join(flowers_for_merge, by = "Plant_ID") %>%
+  filter(!is.na(flower_nativity)) %>%  # Remove if plant ID not found in flower data
+  mutate(
+    bee_nativity_status = ifelse(nativity == 1, "Native Bees", "Non-native Bees"),
+    flower_nativity_status = ifelse(flower_nativity == 1, "Native Flowers", "Non-native Flowers")
+  )
+
+# Summary statistics for interactions
+cat("========== BEE-FLOWER INTERACTION SUMMARY ==========\n")
+cat("Total bee-flower interactions (with known flower nativity):", nrow(bee_flower_interactions), "\n\n")
+
+# Breakdown by bee nativity and flower nativity
+interaction_summary <- bee_flower_interactions %>%
+  group_by(bee_nativity_status, flower_nativity_status) %>%
+  summarise(
+    count = n(),
+    .groups = 'drop'
+  ) %>%
+  group_by(bee_nativity_status) %>%
+  mutate(
+    proportion = count / sum(count) * 100,
+    total_interactions = sum(count)
+  ) %>%
+  ungroup()
+
+print(interaction_summary)
+cat("\n")
+
+# Calculate proportions for each bee group
+native_bee_interactions <- bee_flower_interactions %>%
+  filter(bee_nativity_status == "Native Bees") %>%
+  summarise(
+    native_flowers = sum(flower_nativity == 1),
+    non_native_flowers = sum(flower_nativity == 0),
+    total = n(),
+    prop_native_flowers = native_flowers / total * 100,
+    prop_non_native_flowers = non_native_flowers / total * 100
+  )
+
+nonnative_bee_interactions <- bee_flower_interactions %>%
+  filter(bee_nativity_status == "Non-native Bees") %>%
+  summarise(
+    native_flowers = sum(flower_nativity == 1),
+    non_native_flowers = sum(flower_nativity == 0),
+    total = n(),
+    prop_native_flowers = native_flowers / total * 100,
+    prop_non_native_flowers = non_native_flowers / total * 100
+  )
+
+cat("========== NATIVE BEES ==========\n")
+cat("Total interactions:", native_bee_interactions$total, "\n")
+cat("Interactions with native flowers:", native_bee_interactions$native_flowers, 
+    sprintf("(%.1f%%)", native_bee_interactions$prop_native_flowers), "\n")
+cat("Interactions with non-native flowers:", native_bee_interactions$non_native_flowers, 
+    sprintf("(%.1f%%)", native_bee_interactions$prop_non_native_flowers), "\n\n")
+
+cat("========== NON-NATIVE BEES ==========\n")
+cat("Total interactions:", nonnative_bee_interactions$total, "\n")
+cat("Interactions with native flowers:", nonnative_bee_interactions$native_flowers, 
+    sprintf("(%.1f%%)", nonnative_bee_interactions$prop_native_flowers), "\n")
+cat("Interactions with non-native flowers:", nonnative_bee_interactions$non_native_flowers, 
+    sprintf("(%.1f%%)", nonnative_bee_interactions$prop_non_native_flowers), "\n\n")
+
+# Stats test for bee flower interactions
+
+# Create contingency table for bee nativity vs flower nativity
+interaction_contingency <- table(
+  bee_flower_interactions$bee_nativity_status,
+  bee_flower_interactions$flower_nativity_status
+)
+
+cat("========== CONTINGENCY TABLE ==========\n")
+print(interaction_contingency)
+cat("\n")
+
+# Chi-square test for independence
+interaction_chi <- chisq.test(interaction_contingency)
+cat("========== CHI-SQUARE TEST RESULTS ==========\n")
+cat("Chi-square statistic:", interaction_chi$statistic, "\n")
+cat("Degrees of freedom:", interaction_chi$parameter, "\n")
+cat("P-value:", interaction_chi$p.value, "\n")
+
+# Calculate effect size (Cramer's V)
+interaction_cramers_v <- sqrt(interaction_chi$statistic / 
+                                (sum(interaction_contingency) * 
+                                   (min(dim(interaction_contingency)) - 1)))
+cat("Cramer's V (effect size):", interaction_cramers_v, "\n")
+
+# Interpret p-value
+if(interaction_chi$p.value < 0.001) {
+  cat("Interpretation: Highly significant difference in floral preferences between native and non-native bees (p < 0.001)\n")
+} else if(interaction_chi$p.value < 0.01) {
+  cat("Interpretation: Very significant difference in floral preferences between native and non-native bees (p < 0.01)\n")
+} else if(interaction_chi$p.value < 0.05) {
+  cat("Interpretation: Significant difference in floral preferences between native and non-native bees (p < 0.05)\n")
+} else {
+  cat("Interpretation: No significant difference in floral preferences between native and non-native bees (p >= 0.05)\n")
+}
+cat("\n")
+
+# Two-proportion test: Compare proportion of native flowers visited by native vs non-native bees
+prop_test_result <- prop.test(
+  x = c(native_bee_interactions$native_flowers, 
+        nonnative_bee_interactions$native_flowers),
+  n = c(native_bee_interactions$total, 
+        nonnative_bee_interactions$total)
+)
+
+cat("========== TWO-PROPORTION TEST ==========\n")
+cat("Comparing proportion of visits to NATIVE flowers:\n")
+cat("Native bees:", sprintf("%.1f%%", native_bee_interactions$prop_native_flowers), "\n")
+cat("Non-native bees:", sprintf("%.1f%%", nonnative_bee_interactions$prop_native_flowers), "\n")
+cat("Difference:", sprintf("%.1f%%", abs(native_bee_interactions$prop_native_flowers - 
+                                           nonnative_bee_interactions$prop_native_flowers)), "\n")
+cat("P-value:", prop_test_result$p.value, "\n")
+cat("95% CI for difference:", 
+    round(prop_test_result$conf.int[1] * 100, 1), "% to", 
+    round(prop_test_result$conf.int[2] * 100, 1), "%\n\n")
+
+# Binomial test for each bee group (do they prefer native or non-native flowers?)
+native_bee_binom <- binom.test(
+  x = native_bee_interactions$native_flowers,
+  n = native_bee_interactions$total,
+  p = 0.5
+)
+
+nonnative_bee_binom <- binom.test(
+  x = nonnative_bee_interactions$native_flowers,
+  n = nonnative_bee_interactions$total,
+  p = 0.5
+)
+
+cat("========== BINOMIAL TESTS (50:50 EXPECTATION) ==========\n")
+cat("Native bees - do they prefer native flowers?\n")
+cat("  P-value:", native_bee_binom$p.value, "\n")
+cat("  95% CI for proportion visiting native flowers:", 
+    round(native_bee_binom$conf.int[1] * 100, 1), "% to",
+    round(native_bee_binom$conf.int[2] * 100, 1), "%\n")
+cat("  Interpretation:", 
+    ifelse(native_bee_binom$p.value < 0.05, 
+           ifelse(native_bee_interactions$prop_native_flowers > 50,
+                  "Native bees significantly prefer native flowers",
+                  "Native bees significantly prefer non-native flowers"),
+           "Native bees show no significant preference"), "\n\n")
+
+cat("Non-native bees - do they prefer native flowers?\n")
+cat("  P-value:", nonnative_bee_binom$p.value, "\n")
+cat("  95% CI for proportion visiting native flowers:", 
+    round(nonnative_bee_binom$conf.int[1] * 100, 1), "% to",
+    round(nonnative_bee_binom$conf.int[2] * 100, 1), "%\n")
+cat("  Interpretation:", 
+    ifelse(nonnative_bee_binom$p.value < 0.05,
+           ifelse(nonnative_bee_interactions$prop_native_flowers > 50,
+                  "Non-native bees significantly prefer native flowers",
+                  "Non-native bees significantly prefer non-native flowers"),
+           "Non-native bees show no significant preference"), "\n\n")
+
+# Bootstrap confidence interval for proportions
+
+set.seed(123)
+bootstrap_interaction_props <- function(data, bee_group, n_bootstrap = 1000) {
+  group_data <- data %>% filter(bee_nativity_status == bee_group)
+  n_total <- nrow(group_data)
+  
+  native_flower_props <- replicate(n_bootstrap, {
+    boot_sample <- sample(group_data$flower_nativity, n_total, replace = TRUE)
+    sum(boot_sample == 1) / n_total * 100
+  })
+  
+  return(quantile(native_flower_props, c(0.025, 0.975)))
+}
+
+native_bees_ci <- bootstrap_interaction_props(bee_flower_interactions, "Native Bees")
+nonnative_bees_ci <- bootstrap_interaction_props(bee_flower_interactions, "Non-native Bees")
+
+
+# Prepare data for plotting
+interaction_plot_data <- interaction_summary %>%
+  mutate(
+    lower_ci = case_when(
+      bee_nativity_status == "Native Bees" & flower_nativity_status == "Native Flowers" ~ native_bees_ci[1],
+      bee_nativity_status == "Native Bees" & flower_nativity_status == "Non-native Flowers" ~ 100 - native_bees_ci[2],
+      bee_nativity_status == "Non-native Bees" & flower_nativity_status == "Native Flowers" ~ nonnative_bees_ci[1],
+      bee_nativity_status == "Non-native Bees" & flower_nativity_status == "Non-native Flowers" ~ 100 - nonnative_bees_ci[2]
+    ),
+    upper_ci = case_when(
+      bee_nativity_status == "Native Bees" & flower_nativity_status == "Native Flowers" ~ native_bees_ci[2],
+      bee_nativity_status == "Native Bees" & flower_nativity_status == "Non-native Flowers" ~ 100 - native_bees_ci[1],
+      bee_nativity_status == "Non-native Bees" & flower_nativity_status == "Native Flowers" ~ nonnative_bees_ci[2],
+      bee_nativity_status == "Non-native Bees" & flower_nativity_status == "Non-native Flowers" ~ 100 - nonnative_bees_ci[1]
+    )
+  )
+
+# Plot 1: Bee-flower interaction preferences (WITHOUT the "n.s." annotation)
+p_interactions <- ggplot(interaction_plot_data, 
+                         aes(x = bee_nativity_status, y = proportion, fill = flower_nativity_status)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), 
+           width = 0.7, alpha = 0.8) +
+  geom_errorbar(aes(ymin = lower_ci, ymax = upper_ci),
+                position = position_dodge(width = 0.9), width = 0.25, 
+                size = 0.8) +
+  # REMOVED the annotate() function that was adding the "n.s." text
+  # Also removed the segment annotation that created the bracket
+  labs(
+    title = "Floral Preferences of Native vs Non-native Bees",
+    subtitle = paste0("Proportion of bee visits to native vs exotic flowers | Chi-square p-value: ", 
+                      format(interaction_chi$p.value, scientific = TRUE, digits = 3)),
+    x = "Bee Nativity",
+    y = "Proportion of Visits (%)",
+    fill = "Flower Type"
+  ) +
+  scale_fill_manual(values = c("Native Flowers" = "#265380", "Non-native Flowers" = "#E3DE2D")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 11),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(fill = NA, color = "grey50", size = 0.5)
+  ) +
+  scale_y_continuous(limits = c(0, max(interaction_plot_data$upper_ci) + 10),
+                     breaks = seq(0, 100, by = 10))
+
+print(p_interactions)
+
+# Plot 2: Stacked bar chart for bee-flower interactions
+p_interactions_stacked <- ggplot(interaction_summary, 
+                                 aes(x = bee_nativity_status, y = proportion, fill = flower_nativity_status)) +
+  geom_bar(stat = "identity", position = "stack", width = 0.6) +
+  geom_text(aes(label = paste0(round(proportion, 1), "%")),
+            position = position_stack(vjust = 0.5), size = 4.5) +
+  labs(
+    title = "Bee-Flower Interaction Composition",
+    subtitle = paste0("Total interactions: Native bees = ", native_bee_interactions$total, 
+                      ", Non-native bees = ", nonnative_bee_interactions$total),
+    x = "Bee Nativity",
+    y = "Proportion of Visits (%)",
+    fill = "Flower Type"
+  ) +
+  scale_fill_manual(values = c("Native Flowers" = "#265380", "Non-native Flowers" = "#E3DE2D")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11),
+    axis.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+print(p_interactions_stacked)
+
+# Plot 3: Heatmap of interaction frequencies
+p_heatmap <- ggplot(interaction_summary, 
+                    aes(x = bee_nativity_status, y = flower_nativity_status, fill = count)) +
+  geom_tile() +
+  geom_text(aes(label = paste0(count, "\n(", round(proportion, 1), "%)")), 
+            size = 4.5, color = "white", fontface = "bold") +
+  scale_fill_gradient(low = "#265380", high = "#E3DE2D", trans = "log10") +
+  labs(
+    title = "Bee-Flower Interaction Frequency Heatmap",
+    x = "Bee Nativity",
+    y = "Flower Type",
+    fill = "Number of\nInteractions"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 11),
+    legend.title = element_text(size = 11)
+  )
+
+print(p_heatmap)
+
+# Flower preferences by bee family
+
+cat("========== FLOWER PREFERENCES BY BEE FAMILY ==========\n")
+
+family_interactions <- bee_flower_interactions %>%
+  group_by(Family, bee_nativity_status, flower_nativity_status) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  group_by(Family, bee_nativity_status) %>%
+  mutate(
+    proportion = count / sum(count) * 100,
+    total = sum(count)
+  ) %>%
+  filter(total >= 5)  # Only include families with at least 5 interactions
+
+print(family_interactions)
+cat("\n")
+
+# Plot by bee family (if enough data)
+if(nrow(family_interactions) > 0) {
+  p_family <- ggplot(family_interactions %>% 
+                      filter(flower_nativity_status == "Native Flowers"),
+                    aes(x = reorder(Family, -proportion), y = proportion, fill = bee_nativity_status)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.9), width = 0.7) +
+    labs(
+      title = "Proportion of Visits to Native Flowers by Bee Family",
+      x = "Bee Family",
+      y = "Visits to Native Flowers (%)",
+      fill = "Bee Nativity"
+    ) +
+    scale_fill_manual(values = c("Native Bees" = "#265380", "Non-native Bees" = "#E3DE2D")) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "bottom"
+    ) +
+    coord_flip()
+  
+  print(p_family)
+}
+
+# Save all interaction plots (uncomment to save)
+# ggsave("bee_flower_interactions.png", p_interactions, width = 8, height = 6, dpi = 300)
+# ggsave("bee_flower_interactions_stacked.png", p_interactions_stacked, width = 7, height = 5, dpi = 300)
+# ggsave("bee_flower_heatmap.png", p_heatmap, width = 6, height = 5, dpi = 300)
+
+
+
+# Export interaction data for further analysis
+#write.csv(interaction_summary, "bee_flower_interaction_summary.csv", row.names = FALSE)
+#write.csv(bee_flower_interactions, "bee_flower_interactions_detailed.csv", row.names = FALSE)
+
+cat("\nAnalysis complete! Results exported to:\n")
+cat("- bee_flower_interaction_summary.csv\n")
+cat("- bee_flower_interactions_detailed.csv\n")
+cat("\nKey findings saved in the console output above.\n")
+```
+
+Proportion of native bees at site types
+```{r}
+# Native bees across site types analyses
+
+# Add treatment type classification based on Site column
+# Treatment (T): sites where second letter is T
+# Negative Control (N): sites where second letter is N  
+# Positive Control (P): sites where second letter is P
+
+bee_site_analysis <- bees_clean %>%
+  mutate(
+    Site_Type = case_when(
+      substr(Site, 2, 2) == "T" ~ "Treatment",
+      substr(Site, 2, 2) == "N" ~ "Negative Control",
+      substr(Site, 2, 2) == "P" ~ "Positive Control",
+      TRUE ~ "Other"
+    ),
+    Site_Type = factor(Site_Type, levels = c("Treatment", "Negative Control", "Positive Control"))
+  ) %>%
+  filter(Site_Type != "Other")  # Remove any unclassified sites
+
+# Check the distribution
+cat("========== SITE TYPE DISTRIBUTION ==========\n")
+cat("Total bee captures by site type:\n")
+print(table(bee_site_analysis$Site_Type))
+cat("\nBreakdown by site:\n")
+print(table(bee_site_analysis$Site, bee_site_analysis$Site_Type))
+cat("\n")
+
+# Calculate proportions of native bees by site type
+bee_site_proportions <- bee_site_analysis %>%
+  group_by(Site_Type) %>%
+  summarise(
+    total_captures = n(),
+    native_captures = sum(nativity == 1),
+    non_native_captures = sum(nativity == 0),
+    prop_native = native_captures / total_captures * 100,
+    prop_non_native = non_native_captures / total_captures * 100,
+    .groups = 'drop'
+  )
+
+cat("========== NATIVE BEE PROPORTIONS BY SITE TYPE ==========\n")
+print(bee_site_proportions)
+cat("\n")
+
+# Site type differences tests (ehh)
+
+# Create contingency table for site type vs bee nativity
+site_contingency <- table(bee_site_analysis$Site_Type, bee_site_analysis$nativity)
+colnames(site_contingency) <- c("Non-native", "Native")
+
+cat("========== CONTINGENCY TABLE ==========\n")
+print(site_contingency)
+cat("\n")
+
+# Chi-square test for independence
+site_chi_result <- chisq.test(site_contingency)
+cat("========== CHI-SQUARE TEST RESULTS ==========\n")
+cat("Chi-square statistic:", site_chi_result$statistic, "\n")
+cat("Degrees of freedom:", site_chi_result$parameter, "\n")
+cat("P-value:", site_chi_result$p.value, "\n")
+
+# Calculate effect size (Cramer's V)
+site_cramers_v <- sqrt(site_chi_result$statistic / 
+                         (sum(site_contingency) * (min(dim(site_contingency)) - 1)))
+cat("Cramer's V (effect size):", site_cramers_v, "\n")
+
+# Interpretation
+if(site_chi_result$p.value < 0.001) {
+  cat("Interpretation: Highly significant difference in native bee proportions across site types (p < 0.001)\n")
+} else if(site_chi_result$p.value < 0.01) {
+  cat("Interpretation: Very significant difference across site types (p < 0.01)\n")
+} else if(site_chi_result$p.value < 0.05) {
+  cat("Interpretation: Significant difference across site types (p < 0.05)\n")
+} else {
+  cat("Interpretation: No significant difference across site types (p >= 0.05)\n")
+}
+cat("\n")
+
+# Pairwise comparison of sites
+
+cat("========== PAIRWISE PROPORTION TESTS ==========\n")
+
+# Function to perform pairwise comparisons
+pairwise_site_comparisons <- function(data, site_type_col, nativity_col) {
+  site_levels <- levels(data[[site_type_col]])
+  results <- data.frame()
+  
+  for(i in 1:(length(site_levels)-1)) {
+    for(j in (i+1):length(site_levels)) {
+      group1 <- data[data[[site_type_col]] == site_levels[i], ]
+      group2 <- data[data[[site_type_col]] == site_levels[j], ]
+      
+      prop_test <- prop.test(
+        x = c(sum(group1[[nativity_col]] == 1), sum(group2[[nativity_col]] == 1)),
+        n = c(nrow(group1), nrow(group2))
+      )
+      
+      results <- rbind(results, data.frame(
+        Comparison = paste(site_levels[i], "vs", site_levels[j]),
+        Native_Prop_1 = sum(group1[[nativity_col]] == 1) / nrow(group1) * 100,
+        Native_Prop_2 = sum(group2[[nativity_col]] == 1) / nrow(group2) * 100,
+        Difference = abs(sum(group1[[nativity_col]] == 1) / nrow(group1) - 
+                         sum(group2[[nativity_col]] == 1) / nrow(group2)) * 100,
+        P_value = prop_test$p.value,
+        CI_lower = prop_test$conf.int[1] * 100,
+        CI_upper = prop_test$conf.int[2] * 100
+      ))
+    }
+  }
+  return(results)
+}
+
+pairwise_results <- pairwise_site_comparisons(bee_site_analysis, "Site_Type", "nativity")
+print(pairwise_results)
+
+# Adjust p-values for multiple comparisons (Bonferroni correction)
+pairwise_results$P_adjusted <- p.adjust(pairwise_results$P_value, method = "bonferroni")
+cat("\n========== PAIRWISE TESTS WITH BONFERRONI CORRECTION ==========\n")
+print(pairwise_results)
+
+# Bootstrap confidence interval for site categories
+
+set.seed(123)
+bootstrap_site_props <- function(data, site_type, n_bootstrap = 1000) {
+  site_data <- data %>% filter(Site_Type == site_type)
+  n_total <- nrow(site_data)
+  
+  native_props <- replicate(n_bootstrap, {
+    boot_sample <- sample(site_data$nativity, n_total, replace = TRUE)
+    sum(boot_sample == 1) / n_total * 100
+  })
+  
+  return(quantile(native_props, c(0.025, 0.975)))
+}
+
+treatment_ci <- bootstrap_site_props(bee_site_analysis, "Treatment")
+negative_ci <- bootstrap_site_props(bee_site_analysis, "Negative Control")
+positive_ci <- bootstrap_site_props(bee_site_analysis, "Positive Control")
+
+# Add confidence intervals to proportion data
+bee_site_proportions <- bee_site_proportions %>%
+  mutate(
+    lower_ci = case_when(
+      Site_Type == "Treatment" ~ treatment_ci[1],
+      Site_Type == "Negative Control" ~ negative_ci[1],
+      Site_Type == "Positive Control" ~ positive_ci[1]
+    ),
+    upper_ci = case_when(
+      Site_Type == "Treatment" ~ treatment_ci[2],
+      Site_Type == "Negative Control" ~ negative_ci[2],
+      Site_Type == "Positive Control" ~ positive_ci[2]
+    )
+  )
+
+# Plots
+
+# Plot 1: Native bee proportions by site type with error bars
+p_site <- ggplot(bee_site_proportions, aes(x = Site_Type, y = prop_native, fill = Site_Type)) +
+  geom_bar(stat = "identity", width = 0.7, alpha = 0.8) +
+  geom_errorbar(aes(ymin = lower_ci, ymax = upper_ci), width = 0.25, size = 0.8) +
+  # Add significance annotation from overall test
+  annotate("text", x = 2, y = max(bee_site_proportions$upper_ci) + 5,
+           label = ifelse(site_chi_result$p.value < 0.001, "***",
+                         ifelse(site_chi_result$p.value < 0.01, "**",
+                               ifelse(site_chi_result$p.value < 0.05, "*", "n.s."))),
+           size = 8, fontface = "bold") +
+  labs(
+    title = "Native Bee Proportions by Site Type",
+    subtitle = paste0("Based on ", nrow(bee_site_analysis), " bee captures | Chi-square p-value: ", 
+                      format(site_chi_result$p.value, scientific = TRUE, digits = 3)),
+    x = "Site Type",
+    y = "Proportion of Native Bees (%)",
+    fill = "Site Type"
+  ) +
+  scale_fill_manual(values = c("Treatment" = "#265380", 
+                               "Negative Control" = "#E3DE2D", 
+                               "Positive Control" = "#8B7355")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 11),
+    legend.position = "none",
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(fill = NA, color = "grey50", size = 0.5)
+  ) +
+  scale_y_continuous(limits = c(0, min(100, max(bee_site_proportions$upper_ci) + 10)),
+                     breaks = seq(0, 100, by = 10))
+
+print(p_site)
+
+# Plot 2: Stacked bar chart showing composition
+p_site_stacked <- ggplot(bee_site_proportions, aes(x = Site_Type, y = prop_native, fill = "Native")) +
+  geom_bar(stat = "identity", width = 0.6, alpha = 0.8) +
+  geom_bar(aes(y = prop_non_native, fill = "Non-native"), stat = "identity", width = 0.6, alpha = 0.8) +
+  geom_text(aes(y = prop_native/2, label = paste0(round(prop_native, 1), "%")), 
+            color = "white", size = 4.5) +
+  geom_text(aes(y = prop_native + prop_non_native/2, 
+                label = paste0(round(prop_non_native, 1), "%")), 
+            color = "white", size = 4.5) +
+  labs(
+    title = "Bee Nativity Composition by Site Type",
+    x = "Site Type",
+    y = "Proportion (%)",
+    fill = "Bee Nativity"
+  ) +
+  scale_fill_manual(values = c("Native" = "#265380", "Non-native" = "#E3DE2D")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+print(p_site_stacked)
+
+# Plot 3: Bees captured per site type (boxplot of counts)
+bee_counts_by_site <- bee_site_analysis %>%
+  group_by(Site, Site_Type) %>%
+  summarise(count = n(), .groups = 'drop')
+
+p_counts <- ggplot(bee_counts_by_site, aes(x = Site_Type, y = count, fill = Site_Type)) +
+  geom_boxplot(alpha = 0.7, width = 0.6) +
+  geom_jitter(width = 0.2, alpha = 0.5, size = 2) +
+  labs(
+    title = "Bee Captures by Site Type",
+    subtitle = "Number of bees captured per site",
+    x = "Site Type",
+    y = "Number of Bee Captures",
+    fill = "Site Type"
+  ) +
+  scale_fill_manual(values = c("Treatment" = "#265380", 
+                               "Negative Control" = "#E3DE2D", 
+                               "Positive Control" = "#8B7355")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11),
+    axis.title = element_text(size = 12),
+    legend.position = "none"
+  )
+
+print(p_counts)
+
+# Native bee proportions over time by site type (scuffed)
+
+# Add month information
+bee_temporal <- bee_site_analysis %>%
+  mutate(
+    Month = format(Date, "%Y-%m"),
+    Month_num = as.numeric(format(Date, "%m"))
+  )
+
+# Calculate monthly proportions by site type
+monthly_proportions <- bee_temporal %>%
+  group_by(Site_Type, Month, Month_num) %>%
+  summarise(
+    total = n(),
+    native = sum(nativity == 1),
+    prop_native = native / total * 100,
+    .groups = 'drop'
+  ) %>%
+  filter(total >= 3)  # Only include months with at least 3 captures
+
+if(nrow(monthly_proportions) > 0) {
+  p_temporal <- ggplot(monthly_proportions, aes(x = Month, y = prop_native, 
+                                                  color = Site_Type, group = Site_Type)) +
+    geom_line(size = 1.2) +
+    geom_point(size = 3, alpha = 0.7) +
+    labs(
+      title = "Native Bee Proportions Over Time by Site Type",
+      x = "Month",
+      y = "Proportion of Native Bees (%)",
+      color = "Site Type"
+    ) +
+    scale_color_manual(values = c("Treatment" = "#265380", 
+                                  "Negative Control" = "#E3DE2D", 
+                                  "Positive Control" = "#8B7355")) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      axis.title = element_text(size = 12),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      legend.position = "bottom"
+    ) +
+    ylim(0, 100)
+  
+  print(p_temporal)
+}
+
+
+# Save results to CSV
+#write.csv(bee_site_proportions, "bee_site_type_proportions.csv", row.names = FALSE)
+#write.csv(pairwise_results, "bee_site_type_pairwise_tests.csv", row.names = FALSE)
+
+# Save plots (uncomment to save)
+# ggsave("bee_site_type_comparison.png", p_site, width = 8, height = 6, dpi = 300)
+# ggsave("bee_site_type_stacked.png", p_site_stacked, width = 7, height = 5, dpi = 300)
+# ggsave("bee_capture_counts.png", p_counts, width = 8, height = 6, dpi = 300)
+
+cat("\n========== SUMMARY OF SITE TYPE ANALYSIS ==========\n")
+cat("Analysis complete! Results exported to:\n")
+cat("- bee_site_type_proportions.csv\n")
+cat("- bee_site_type_pairwise_tests.csv\n")
+cat("\nKey findings:\n")
+for(i in 1:nrow(bee_site_proportions)) {
+  cat(sprintf("%s: %.1f%% native bees (n=%d)\n", 
+              bee_site_proportions$Site_Type[i],
+              bee_site_proportions$prop_native[i],
+              bee_site_proportions$total_captures[i]))
+}
+
+
+```
+
+
+```{r}
+# Native plants across site type
+
+# Add treatment type classification based on Site column for flowers
+flower_site_analysis <- flowers_clean %>%
+  mutate(
+    Site_Type = case_when(
+      substr(Site, 2, 2) == "T" ~ "Treatment",
+      substr(Site, 2, 2) == "N" ~ "Negative Control",
+      substr(Site, 2, 2) == "P" ~ "Positive Control",
+      TRUE ~ "Other"
+    ),
+    Site_Type = factor(Site_Type, levels = c("Treatment", "Negative Control", "Positive Control"))
+  ) %>%
+  filter(Site_Type != "Other")  # Remove any unclassified sites
+
+# Check the distribution
+cat("========== FLOWER SITE TYPE DISTRIBUTION ==========\n")
+cat("Total flower observations by site type:\n")
+print(table(flower_site_analysis$Site_Type))
+cat("\nBreakdown by site:\n")
+print(table(flower_site_analysis$Site, flower_site_analysis$Site_Type))
+cat("\n")
+
+# Calculate proportions of native plants by site type
+flower_site_proportions <- flower_site_analysis %>%
+  group_by(Site_Type) %>%
+  summarise(
+    total_observations = n(),
+    native_observations = sum(nativity == 1),
+    non_native_observations = sum(nativity == 0),
+    prop_native = native_observations / total_observations * 100,
+    prop_non_native = non_native_observations / total_observations * 100,
+    .groups = 'drop'
+  )
+
+cat("========== NATIVE PLANT PROPORTIONS BY SITE TYPE ==========\n")
+print(flower_site_proportions)
+cat("\n")
+
+# Site type differences
+
+# Create contingency table for site type vs plant nativity
+flower_site_contingency <- table(flower_site_analysis$Site_Type, flower_site_analysis$nativity)
+colnames(flower_site_contingency) <- c("Non-native", "Native")
+
+cat("========== CONTINGENCY TABLE (PLANTS) ==========\n")
+print(flower_site_contingency)
+cat("\n")
+
+# Chi-square test for independence
+flower_site_chi <- chisq.test(flower_site_contingency)
+cat("========== CHI-SQUARE TEST RESULTS (PLANTS) ==========\n")
+cat("Chi-square statistic:", flower_site_chi$statistic, "\n")
+cat("Degrees of freedom:", flower_site_chi$parameter, "\n")
+cat("P-value:", flower_site_chi$p.value, "\n")
+
+# Calculate effect size (Cramer's V)
+flower_site_cramers_v <- sqrt(flower_site_chi$statistic / 
+                                (sum(flower_site_contingency) * 
+                                   (min(dim(flower_site_contingency)) - 1)))
+cat("Cramer's V (effect size):", flower_site_cramers_v, "\n")
+
+# Interpretation
+if(flower_site_chi$p.value < 0.001) {
+  cat("Interpretation: Highly significant difference in native plant proportions across site types (p < 0.001)\n")
+} else if(flower_site_chi$p.value < 0.01) {
+  cat("Interpretation: Very significant difference across site types (p < 0.01)\n")
+} else if(flower_site_chi$p.value < 0.05) {
+  cat("Interpretation: Significant difference across site types (p < 0.05)\n")
+} else {
+  cat("Interpretation: No significant difference across site types (p >= 0.05)\n")
+}
+cat("\n")
+
+# Pairwise comp for plants
+
+cat("========== PAIRWISE PROPORTION TESTS (PLANTS) ==========\n")
+
+flower_pairwise_results <- pairwise_site_comparisons(flower_site_analysis, "Site_Type", "nativity")
+print(flower_pairwise_results)
+
+# Adjust p-values for multiple comparisons
+flower_pairwise_results$P_adjusted <- p.adjust(flower_pairwise_results$P_value, method = "bonferroni")
+cat("\n========== PAIRWISE TESTS WITH BONFERRONI CORRECTION (PLANTS) ==========\n")
+print(flower_pairwise_results)
+
+# Bootstrap for plants
+
+set.seed(123)
+bootstrap_flower_site_props <- function(data, site_type, n_bootstrap = 1000) {
+  site_data <- data %>% filter(Site_Type == site_type)
+  n_total <- nrow(site_data)
+  
+  native_props <- replicate(n_bootstrap, {
+    boot_sample <- sample(site_data$nativity, n_total, replace = TRUE)
+    sum(boot_sample == 1) / n_total * 100
+  })
+  
+  return(quantile(native_props, c(0.025, 0.975)))
+}
+
+flower_treatment_ci <- bootstrap_flower_site_props(flower_site_analysis, "Treatment")
+flower_negative_ci <- bootstrap_flower_site_props(flower_site_analysis, "Negative Control")
+flower_positive_ci <- bootstrap_flower_site_props(flower_site_analysis, "Positive Control")
+
+# Add confidence intervals to proportion data
+flower_site_proportions <- flower_site_proportions %>%
+  mutate(
+    lower_ci = case_when(
+      Site_Type == "Treatment" ~ flower_treatment_ci[1],
+      Site_Type == "Negative Control" ~ flower_negative_ci[1],
+      Site_Type == "Positive Control" ~ flower_positive_ci[1]
+    ),
+    upper_ci = case_when(
+      Site_Type == "Treatment" ~ flower_treatment_ci[2],
+      Site_Type == "Negative Control" ~ flower_negative_ci[2],
+      Site_Type == "Positive Control" ~ flower_positive_ci[2]
+    )
+  )
+
+# Plots
+
+# Plot 1: Native plant proportions by site type with error bars
+p_flower_site <- ggplot(flower_site_proportions, aes(x = Site_Type, y = prop_native, fill = Site_Type)) +
+  geom_bar(stat = "identity", width = 0.7, alpha = 0.8) +
+  geom_errorbar(aes(ymin = lower_ci, ymax = upper_ci), width = 0.25, size = 0.8) +
+  # Add significance annotation from overall test
+  annotate("text", x = 2, y = max(flower_site_proportions$upper_ci) + 5,
+           label = ifelse(flower_site_chi$p.value < 0.001, "***",
+                         ifelse(flower_site_chi$p.value < 0.01, "**",
+                               ifelse(flower_site_chi$p.value < 0.05, "*", "n.s."))),
+           size = 8, fontface = "bold") +
+  labs(
+    title = "Native Plant Proportions by Site Type",
+    subtitle = paste0("Based on ", nrow(flower_site_analysis), " flower observations | Chi-square p-value: ", 
+                      format(flower_site_chi$p.value, scientific = TRUE, digits = 3)),
+    x = "Site Type",
+    y = "Proportion of Native Plants (%)",
+    fill = "Site Type"
+  ) +
+  scale_fill_manual(values = c("Treatment" = "#2E8B57", 
+                               "Negative Control" = "#DAA520", 
+                               "Positive Control" = "#8B4513")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 11),
+    legend.position = "none",
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(fill = NA, color = "grey50", size = 0.5)
+  ) +
+  scale_y_continuous(limits = c(0, min(100, max(flower_site_proportions$upper_ci) + 10)),
+                     breaks = seq(0, 100, by = 10))
+
+print(p_flower_site)
+
+# Plot 2: Stacked bar chart for plants
+p_flower_stacked <- ggplot(flower_site_proportions, aes(x = Site_Type, y = prop_native, fill = "Native")) +
+  geom_bar(stat = "identity", width = 0.6, alpha = 0.8) +
+  geom_bar(aes(y = prop_non_native, fill = "Non-native"), stat = "identity", width = 0.6, alpha = 0.8) +
+  geom_text(aes(y = prop_native/2, label = paste0(round(prop_native, 1), "%")), 
+            color = "white", size = 4.5) +
+  geom_text(aes(y = prop_native + prop_non_native/2, 
+                label = paste0(round(prop_non_native, 1), "%")), 
+            color = "white", size = 4.5) +
+  labs(
+    title = "Plant Nativity Composition by Site Type",
+    x = "Site Type",
+    y = "Proportion (%)",
+    fill = "Plant Nativity"
+  ) +
+  scale_fill_manual(values = c("Native" = "#2E8B57", "Non-native" = "#DAA520")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title = element_text(size = 12),
+    legend.position = "bottom"
+  )
+
+print(p_flower_stacked)
+
+# Plot 3: Flower observations per site type (boxplot)
+flower_counts_by_site <- flower_site_analysis %>%
+  group_by(Site, Site_Type) %>%
+  summarise(count = n(), .groups = 'drop')
+
+p_flower_counts <- ggplot(flower_counts_by_site, aes(x = Site_Type, y = count, fill = Site_Type)) +
+  geom_boxplot(alpha = 0.7, width = 0.6) +
+  geom_jitter(width = 0.2, alpha = 0.5, size = 2) +
+  labs(
+    title = "Flower Observations by Site Type",
+    subtitle = "Number of flowering units observed per site",
+    x = "Site Type",
+    y = "Number of Flower Observations",
+    fill = "Site Type"
+  ) +
+  scale_fill_manual(values = c("Treatment" = "#2E8B57", 
+                               "Negative Control" = "#DAA520", 
+                               "Positive Control" = "#8B4513")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11),
+    axis.title = element_text(size = 12),
+    legend.position = "none"
+  )
+
+print(p_flower_counts)
+
+# Combined analysis: Plants AND Bees by Site Type
+
+# Combine plant and bee data for comparison
+combined_site_data <- bind_rows(
+  flower_site_analysis %>%
+    select(Site_Type, nativity) %>%
+    mutate(Organism = "Plants"),
+  bee_site_analysis %>%
+    select(Site_Type, nativity) %>%
+    mutate(Organism = "Bees")
+)
+
+# Calculate proportions for combined visualization
+combined_site_proportions <- combined_site_data %>%
+  group_by(Site_Type, Organism) %>%
+  summarise(
+    total = n(),
+    native = sum(nativity == 1),
+    prop_native = native / total * 100,
+    .groups = 'drop'
+  )
+
+# Plot 4: Comparison of plants vs bees across site types
+p_combined_site <- ggplot(combined_site_proportions, 
+                          aes(x = Site_Type, y = prop_native, fill = Organism)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.9), 
+           width = 0.7, alpha = 0.8) +
+  labs(
+    title = "Native Proportions: Plants vs Bees by Site Type",
+    subtitle = "Comparing native proportions across different experimental treatments",
+    x = "Site Type",
+    y = "Proportion of Native Species (%)",
+    fill = "Organism Type"
+  ) +
+  scale_fill_manual(values = c("Plants" = "#2E8B57", "Bees" = "#265380")) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 11),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 11),
+    legend.position = "bottom",
+    panel.grid.minor = element_blank(),
+    panel.border = element_rect(fill = NA, color = "grey50", size = 0.5)
+  ) +
+  scale_y_continuous(limits = c(0, 100), breaks = seq(0, 100, by = 10))
+
+print(p_combined_site)
+
+
+
+#write.csv(flower_site_proportions, "plant_site_type_proportions.csv", row.names = FALSE)
+#write.csv(flower_pairwise_results, "plant_site_type_pairwise_tests.csv", row.names = FALSE)
+
+cat("\n========== SUMMARY OF PLANT SITE TYPE ANALYSIS ==========\n")
+cat("Analysis complete! Results exported to:\n")
+cat("- plant_site_type_proportions.csv\n")
+cat("- plant_site_type_pairwise_tests.csv\n")
+cat("\nKey findings for plants:\n")
+for(i in 1:nrow(flower_site_proportions)) {
+  cat(sprintf("%s: %.1f%% native plants (n=%d)\n", 
+              flower_site_proportions$Site_Type[i],
+              flower_site_proportions$prop_native[i],
+              flower_site_proportions$total_observations[i]))
+}
+
+# Plant vs bee nativity proportions across site types
+
+cat("\n========== COMPARISON OF PLANTS AND BEES BY SITE TYPE ==========\n")
+comparison_by_site <- combined_site_proportions %>%
+  pivot_wider(names_from = Organism, values_from = c(prop_native, total)) %>%
+  mutate(
+    Difference = prop_native_Bees - prop_native_Plants,
+    Direction = ifelse(Difference > 0, "Bees higher", 
+                      ifelse(Difference < 0, "Plants higher", "Equal"))
+  )
+
+print(comparison_by_site)
+
+# Test if plants and bees differ within each site type
+cat("\n========== STATISTICAL TESTS: PLANTS VS BEES WITHIN EACH SITE TYPE ==========\n")
+for(site in c("Treatment", "Negative Control", "Positive Control")) {
+  plant_data <- flower_site_analysis %>% filter(Site_Type == site)
+  bee_data <- bee_site_analysis %>% filter(Site_Type == site)
+  
+  if(nrow(plant_data) > 0 & nrow(bee_data) > 0) {
+    contingency <- matrix(c(
+      sum(plant_data$nativity == 1), sum(plant_data$nativity == 0),
+      sum(bee_data$nativity == 1), sum(bee_data$nativity == 0)
+    ), nrow = 2, byrow = TRUE)
+    
+    rownames(contingency) <- c("Plants", "Bees")
+    colnames(contingency) <- c("Native", "Non-native")
+    
+    test_result <- chisq.test(contingency)
+    cat(sprintf("\n%s:\n", site))
+    cat("  Plants: ", sprintf("%.1f%% native", sum(plant_data$nativity == 1)/nrow(plant_data)*100), "\n")
+    cat("  Bees: ", sprintf("%.1f%% native", sum(bee_data$nativity == 1)/nrow(bee_data)*100), "\n")
+    cat("  P-value:", test_result$p.value, "\n")
+    cat("  Significant:", ifelse(test_result$p.value < 0.05, "YES", "NO"), "\n")
+  }
+}
+```
